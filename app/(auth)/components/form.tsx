@@ -37,66 +37,64 @@ export function AuthForm({ signup = false }: FormProps) {
     },
   });
   return (
-    <div className="flex min-h-screen bg-gray-100 bg-texture">
-      <div className="m-auto w-full max-w-md p-8 bg-white rounded-xl shadow-md">
-        <div className="flex flex-col items-center space-y-4 mb-6">
-          <MessageSquare className="h-12 w-12 text-primary" />
-          <h1 className="text-3xl font-bold text-gray-800">Push It!</h1>
-          <p className="text-muted-foreground text-center">
-            {signup
-              ? "Sign up to start messaging instantly"
-              : "Sign in with your account"}
-          </p>
-        </div>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel htmlFor="email">Email</FormLabel>
-                  <FormControl>
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="you@example.com"
-                      {...field}
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            ></FormField>
-            <FormField
-              control={form.control}
-              name="password"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel htmlFor="password">Password</FormLabel>
-                  <FormControl>
-                    <Input
-                      id="password"
-                      type="password"
-                      placeholder="password123"
-                      {...field}
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            ></FormField>
-
-            <Button type="submit" className="w-full">
-              Sign Up
-            </Button>
-          </form>
-        </Form>
-        <p className="mt-4 text-center text-sm text-gray-600">
-          Already have an account?{" "}
-          <a href="/login" className="text-primary hover:underline">
-            Log in
-          </a>
+    <div className="m-auto w-full max-w-md p-8 bg-white rounded-xl shadow-md">
+      <div className="flex flex-col items-center space-y-4 mb-6">
+        <MessageSquare className="h-12 w-12 text-primary" />
+        <h1 className="text-3xl font-bold text-gray-800">Push It!</h1>
+        <p className="text-muted-foreground text-center">
+          {signup
+            ? "Sign up to start messaging instantly"
+            : "Sign in with your account"}
         </p>
       </div>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <FormField
+            control={form.control}
+            name="email"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel htmlFor="email">Email</FormLabel>
+                <FormControl>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="you@example.com"
+                    {...field}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          ></FormField>
+          <FormField
+            control={form.control}
+            name="password"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel htmlFor="password">Password</FormLabel>
+                <FormControl>
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder="password123"
+                    {...field}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          ></FormField>
+
+          <Button type="submit" className="w-full">
+            Sign Up
+          </Button>
+        </form>
+      </Form>
+      <p className="mt-4 text-center text-sm text-gray-600">
+        Already have an account?{" "}
+        <a href="/login" className="text-primary hover:underline">
+          Log in
+        </a>
+      </p>
     </div>
   );
 }
