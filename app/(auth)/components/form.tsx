@@ -101,8 +101,8 @@ export function AuthForm({ signup = false }: FormProps) {
         const result = await signIn("credentials", {
           email: values.email,
           password: values.password,
+          redirect: false,
           callbackUrl: "/dashboard",
-          redirect: true,
         });
 
         if (result?.error) {
@@ -110,7 +110,10 @@ export function AuthForm({ signup = false }: FormProps) {
           return;
         }
 
-        toast.success("Logged in successfully!");
+        if (result?.url) {
+          router.push(result.url);
+          toast.success("Logged in successfully!");
+        }
       }
     } catch (error) {
       console.error("Form submission error:", error);

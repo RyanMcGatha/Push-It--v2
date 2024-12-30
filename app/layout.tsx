@@ -27,8 +27,9 @@ export default function RootLayout({
               toastOptions={{
                 style: {
                   zIndex: 9999,
-                  background: "#333",
-                  color: "#fff",
+                  background: "hsl(var(--background))",
+                  color: "hsl(var(--foreground))",
+                  border: "1px solid hsl(var(--border))",
                 },
               }}
             />

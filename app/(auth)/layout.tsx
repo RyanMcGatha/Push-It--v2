@@ -10,14 +10,15 @@ export default function AuthLayout({
   return (
     <ThemeProvider>
       <Nav />
-      <div className="flex h-screen p-8 flex-col items-center justify-center bg-gray-100 bg-texture">
+      <div className="flex h-screen p-8 flex-col items-center justify-center bg-background bg-texture">
         <Toaster
           position="top-center"
           toastOptions={{
             style: {
               zIndex: 9999,
-              background: "#333",
-              color: "#fff",
+              background: "hsl(var(--background))",
+              color: "hsl(var(--foreground))",
+              border: "1px solid hsl(var(--border))",
             },
           }}
         />

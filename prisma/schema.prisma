@@ -16,6 +16,7 @@ model User {
   password      String?
   accounts      Account[]
   sessions      Session[]
+  profile       Profile?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 }
@@ -53,4 +54,23 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+}
+
+model Profile {
+  id              String    @id @default(cuid())
+  bio             String?   @db.Text
+  location        String?
+  website         String?
+  twitterHandle   String?
+  githubHandle    String?
+  company         String?
+  jobTitle        String?
+  dateOfBirth     DateTime?
+  phoneNumber     String?
+  displayName     String?
+  profileComplete Boolean   @default(false)
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId         String    @unique
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 }
