@@ -14,7 +14,7 @@ export function Nav() {
   if (isAuthPage) return null;
 
   return (
-    <nav className="border-b bg-white bg-texture fixed top-0 left-0 right-0 z-50">
+    <nav className="border-b bg-white bg-opacity-50 fixed top-0 left-0 right-0 z-50">
       <div className="flex h-16 items-center px-4 container">
         <div className="flex items-center gap-2 mr-4">
           <MessageSquare className="h-6 w-6 text-primary" />

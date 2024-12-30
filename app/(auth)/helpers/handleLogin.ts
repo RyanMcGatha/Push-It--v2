@@ -2,6 +2,8 @@
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
+import CryptoJS from "crypto-js";
+import { setAuthCookie } from "@/lib/cookies";
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email format"),
@@ -47,6 +49,22 @@ const handleLogin = async (
         message: "Invalid email or password",
       };
     }
+
+    // Create a session token
+    const sessionData = {
+      userId: user.id,
+      email: user.email,
+      timestamp: Date.now(),
+    };
+
+    // Encrypt the session data
+    const encryptedToken = CryptoJS.AES.encrypt(
+      JSON.stringify(sessionData),
+      process.env.SESSION_SECRET || "default-secret"
+    ).toString();
+
+    // Set the session cookie using utility
+    await setAuthCookie(encryptedToken);
 
     return {
       success: true,
