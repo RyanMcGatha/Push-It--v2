@@ -4,20 +4,16 @@ import { useRouter } from "next/navigation";
 import { toast } from "react-hot-toast";
 import { LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import handleLogout from "@/app/(auth)/helpers/handleLogout";
+import { signOut } from "next-auth/react";
 
 export default function LogoutButton() {
   const router = useRouter();
 
   const onLogout = async () => {
     try {
-      const response = await handleLogout();
-      if (response.success) {
-        toast.success(response.message);
-        router.push("/login");
-      } else {
-        toast.error(response.message);
-      }
+      await signOut({ redirect: true, callbackUrl: "/login" });
+      toast.success("Logged out successfully");
+      router.push("/login");
     } catch (error) {
       console.error("Logout error:", error);
       toast.error("An unexpected error occurred");

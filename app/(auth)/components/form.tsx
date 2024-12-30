@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { MessageSquare, Eye, EyeOff } from "lucide-react";
 import { toast } from "react-hot-toast";
+import { signIn } from "next-auth/react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,9 +27,6 @@ import {
   CardContent,
   CardFooter,
 } from "@/components/ui/card";
-
-import handleLogin from "../helpers/handleLogin";
-import handleSignUp from "../helpers/handleSignUp";
 
 interface FormProps {
   signup?: boolean;
@@ -65,19 +63,54 @@ export function AuthForm({ signup = false }: FormProps) {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
       setIsLoading(true);
-      const handler = signup ? handleSignUp : handleLogin;
-      const response = await handler(values.email, values.password);
 
-      if (response.success) {
-        toast.success(
-          signup ? "Account created successfully!" : "Logged in successfully!"
-        );
-        await new Promise((resolve) => setTimeout(resolve, 1500));
-        router.push("/messages");
+      if (signup) {
+        // Handle signup
+        const response = await fetch("/api/auth/signup", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(values),
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          toast.success("Account created successfully!");
+          // Sign in the user after successful signup
+          const result = await signIn("credentials", {
+            email: values.email,
+            password: values.password,
+            action: "register",
+            callbackUrl: "/dashboard",
+            redirect: true,
+          });
+
+          if (result?.error) {
+            toast.error(result.error);
+            return;
+          }
+
+          toast.success("Account created successfully!");
+        } else {
+          toast.error(data.message || "Failed to create account");
+        }
       } else {
-        toast.error(
-          response.message || `Failed to ${signup ? "create account" : "login"}`
-        );
+        // Handle login
+        const result = await signIn("credentials", {
+          email: values.email,
+          password: values.password,
+          callbackUrl: "/dashboard",
+          redirect: true,
+        });
+
+        if (result?.error) {
+          toast.error(result.error);
+          return;
+        }
+
+        toast.success("Logged in successfully!");
       }
     } catch (error) {
       console.error("Form submission error:", error);
@@ -86,6 +119,18 @@ export function AuthForm({ signup = false }: FormProps) {
       setIsLoading(false);
     }
   }
+
+  const handleGoogleSignIn = async () => {
+    try {
+      setIsLoading(true);
+      await signIn("google", { callbackUrl: "/dashboard" });
+    } catch (error) {
+      console.error("Google sign in error:", error);
+      toast.error("An error occurred with Google sign in");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const togglePasswordVisibility = () => setShowPassword(!showPassword);
 
@@ -105,7 +150,43 @@ export function AuthForm({ signup = false }: FormProps) {
             : "Sign in with your account"}
         </p>
       </CardHeader>
-      <CardContent>
+      <CardContent className="space-y-4">
+        <Button
+          type="button"
+          className="w-full"
+          variant="outline"
+          disabled={isLoading}
+          onClick={handleGoogleSignIn}
+        >
+          <svg
+            className="mr-2 h-4 w-4"
+            aria-hidden="true"
+            focusable="false"
+            data-prefix="fab"
+            data-icon="google"
+            role="img"
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 488 512"
+          >
+            <path
+              fill="currentColor"
+              d="M488 261.8C488 403.3 391.1 504 248 504 110.8 504 0 393.2 0 256S110.8 8 248 8c66.8 0 123 24.5 166.3 64.9l-67.5 64.9C258.5 52.6 94.3 116.6 94.3 256c0 86.5 69.1 156.6 153.7 156.6 98.2 0 135-70.4 140.8-106.9H248v-85.3h236.1c2.3 12.7 3.9 24.9 3.9 41.4z"
+            ></path>
+          </svg>
+          Continue with Google
+        </Button>
+
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center">
+            <span className="w-full border-t" />
+          </div>
+          <div className="relative flex justify-center text-xs uppercase">
+            <span className="bg-background px-2 text-muted-foreground">
+              Or continue with
+            </span>
+          </div>
+        </div>
+
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
