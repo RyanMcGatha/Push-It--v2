@@ -14,6 +14,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import handleSignUp from "../helpers/handleSignUp";
 
 interface FormProps {
   signup: boolean;
@@ -25,8 +26,10 @@ export function AuthForm({ signup = false }: FormProps) {
     password: z.string(),
   });
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    console.log(values);
+  async function onSubmit(values: z.infer<typeof formSchema>) {
+    if (signup) {
+      const response = await handleSignUp(values.email, values.password);
+    }
   }
 
   const form = useForm<z.infer<typeof formSchema>>({
