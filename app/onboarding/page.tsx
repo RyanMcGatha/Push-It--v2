@@ -1,7 +1,8 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { OnboardingProgress } from "./components/OnboardingProgress";
 import { WelcomeScreen } from "./components/WelcomeScreen";
 import { FeatureWalkthrough } from "./components/FeatureWalkthrough";
@@ -11,17 +12,52 @@ import { CompletionScreen } from "./components/CompletionScreen";
 const steps = ["welcome", "features", "personalization", "completion"];
 
 export default function OnboardingPage() {
+  const router = useRouter();
   const [currentStep, setCurrentStep] = useState("welcome");
 
-  const handleNext = () => {
+  useEffect(() => {
+    // Fetch initial onboarding progress
+    fetch("/api/onboarding/progress")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.onboardingComplete) {
+          router.push("/dashboard");
+        } else if (data.onboardingStep) {
+          setCurrentStep(data.onboardingStep);
+        }
+      });
+  }, []);
+
+  const updateProgress = async (step: string) => {
+    await fetch("/api/onboarding/progress", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ step }),
+    });
+  };
+
+  const handleNext = async () => {
     const currentIndex = steps.indexOf(currentStep);
     if (currentIndex < steps.length - 1) {
-      setCurrentStep(steps[currentIndex + 1]);
+      const nextStep = steps[currentIndex + 1];
+      setCurrentStep(nextStep);
+      await updateProgress(nextStep);
+
+      // If moving to completion step, mark onboarding as complete
+      if (nextStep === "completion") {
+        await fetch("/api/onboarding/complete", {
+          method: "POST",
+        });
+      }
     }
   };
 
-  const handleSkip = () => {
+  const handleSkip = async () => {
     setCurrentStep("completion");
+    await updateProgress("completion");
+    await fetch("/api/onboarding/complete", {
+      method: "POST",
+    });
   };
 
   return (

@@ -69,6 +69,8 @@ model Profile {
   phoneNumber     String?
   displayName     String?
   profileComplete Boolean   @default(false)
+  onboardingComplete Boolean @default(false)
+  onboardingStep    String? @default("welcome") // Possible values: welcome, personalization, features, completion
   user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId         String    @unique
   createdAt      DateTime  @default(now())

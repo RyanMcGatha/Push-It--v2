@@ -2,9 +2,28 @@
 
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 export function CompletionScreen() {
   const router = useRouter();
+  const [userName, setUserName] = useState<string>("");
+
+  useEffect(() => {
+    // Fetch the user's profile data
+    const fetchProfile = async () => {
+      try {
+        const response = await fetch("/api/me");
+        if (response.ok) {
+          const data = await response.json();
+          setUserName(data.name || "");
+        }
+      } catch (error) {
+        console.error("Error fetching profile:", error);
+      }
+    };
+
+    fetchProfile();
+  }, []);
 
   const goToDashboard = () => {
     router.push("/dashboard");
@@ -50,7 +69,7 @@ export function CompletionScreen() {
           transition={{ delay: 0.5 }}
         >
           <h2 className="text-3xl font-bold text-foreground mb-4">
-            You're All Set!
+            {userName ? `You're All Set, ${userName}!` : "You're All Set!"}
           </h2>
           <p className="text-lg text-muted-foreground mb-8">
             Your workspace is ready. Let's start creating amazing things

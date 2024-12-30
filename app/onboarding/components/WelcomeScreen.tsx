@@ -70,7 +70,7 @@ export function WelcomeScreen({ onNext, onSkip }: WelcomeScreenProps) {
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.3 }}
         >
-          Let's get you set up for success in just a few steps
+          Your new favorite way to stay connected and chat with friends
         </motion.p>
 
         <motion.div
@@ -107,9 +107,18 @@ export function WelcomeScreen({ onNext, onSkip }: WelcomeScreenProps) {
         transition={{ delay: 0.5 }}
       >
         {[
-          { title: "Easy Setup", description: "Get started in minutes" },
-          { title: "Personalized", description: "Tailored to your needs" },
-          { title: "Powerful", description: "All the tools you need" },
+          {
+            title: "Instant Messaging",
+            description: "Send messages in real-time",
+          },
+          {
+            title: "Group Chats",
+            description: "Connect with multiple friends at once",
+          },
+          {
+            title: "Rich Media",
+            description: "Share photos, videos, and more",
+          },
         ].map((feature, index) => (
           <motion.div
             key={feature.title}

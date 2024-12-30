@@ -50,11 +50,44 @@ export function PersonalizationStep({
     "notifications",
   ]);
   const [name, setName] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
   const togglePreference = (id: string) => {
     setSelectedPreferences((prev) =>
       prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]
     );
+  };
+
+  const handleContinue = async () => {
+    if (!name.trim()) {
+      return; // Don't proceed if name is empty
+    }
+
+    setIsLoading(true);
+    try {
+      const response = await fetch("/api/onboarding", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: name.trim(),
+          theme: selectedTheme,
+          preferences: selectedPreferences,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to save preferences");
+      }
+
+      onNext();
+    } catch (error) {
+      console.error("Error saving preferences:", error);
+      // You might want to show an error message to the user here
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -138,16 +171,19 @@ export function PersonalizationStep({
           <button
             onClick={onSkip}
             className="text-muted-foreground hover:text-foreground font-medium"
+            disabled={isLoading}
           >
             Skip
           </button>
           <button
-            onClick={onNext}
+            onClick={handleContinue}
+            disabled={isLoading || !name.trim()}
             className="px-6 py-2 bg-primary text-primary-foreground rounded-lg
               font-semibold hover:bg-primary/90 transition-colors duration-200
-              focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+              focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2
+              disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Continue
+            {isLoading ? "Saving..." : "Continue"}
           </button>
         </div>
       </motion.div>

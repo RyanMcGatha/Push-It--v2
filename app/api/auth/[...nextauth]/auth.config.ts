@@ -106,7 +106,7 @@ export const authOptions: AuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
   pages: {
     signIn: "/login",
-    newUser: "/signup",
+    newUser: "/onboarding",
     error: undefined, // Disable default error page
   },
   callbacks: {

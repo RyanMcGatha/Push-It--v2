@@ -4,6 +4,7 @@ import "./globals.css";
 import { ThemeProvider } from "@/app/utils/theme-provider";
 import { Toaster } from "react-hot-toast";
 import { NextAuthProvider } from "@/app/utils/next-auth-provider";
+import { ToastProvider } from "@/components/ui/toast";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -36,6 +37,7 @@ export default function RootLayout({
             {children}
           </ThemeProvider>
         </NextAuthProvider>
+        <ToastProvider />
       </body>
     </html>
   );

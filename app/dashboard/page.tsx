@@ -1,79 +1,92 @@
-import { Card } from "@/components/ui/card";
-import LogoutButton from "@/app/dashboard/components/logout-button";
+"use client";
+
+import { useToast } from "@/components/ui/use-toast";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
+import ChatSidebar from "./components/ChatSidebar";
+import ChatArea from "./components/ChatArea";
+import { Chat } from "./types";
 
 export default function DashboardPage() {
-  return (
-    <div className="grid h-full grid-cols-[300px_1fr] gap-4">
-      {/* Conversations Sidebar */}
-      <Card className="p-4">
-        <div className="flex flex-col space-y-2">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">Conversations</h2>
-            <LogoutButton />
-          </div>
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="Search conversations..."
-              className="w-full rounded-md border px-3 py-2 text-sm"
-            />
-          </div>
-          <div className="mt-4 space-y-2">
-            {/* Placeholder conversations */}
-            {[1, 2, 3].map((i) => (
-              <div
-                key={i}
-                className="flex cursor-pointer items-center space-x-3 rounded-lg p-2 hover:bg-accent"
+  const { toast } = useToast();
+  const router = useRouter();
+  const [searchQuery, setSearchQuery] = useState("");
+  const [message, setMessage] = useState("");
+  const [selectedChat, setSelectedChat] = useState<number | null>(null);
+
+  useEffect(() => {
+    fetch("/api/onboarding/progress")
+      .then((res) => res.json())
+      .then((data) => {
+        if (!data.onboardingComplete) {
+          toast({
+            title: "Complete your setup",
+            description: "Would you like to finish setting up your account?",
+            action: (
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => router.push("/onboarding")}
+                className="rounded-full bg-primary/90 px-4 py-2 text-sm font-medium text-white hover:bg-primary transition-all"
               >
-                <div className="h-10 w-10 rounded-full bg-primary" />
-                <div>
-                  <p className="font-medium">User {i}</p>
-                  <p className="text-sm text-muted-foreground">
-                    Last message preview...
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </Card>
+                Continue Setup
+              </motion.button>
+            ),
+            duration: 0,
+          });
+        }
+      });
+  }, []);
 
-      {/* Main Chat Area */}
-      <Card className="flex flex-col p-4">
-        <div className="mb-4 flex items-center space-x-3 border-b pb-4">
-          <div className="h-10 w-10 rounded-full bg-primary" />
-          <div>
-            <h2 className="font-semibold">Current Chat</h2>
-            <p className="text-sm text-muted-foreground">Online</p>
-          </div>
-        </div>
+  const conversations: Chat[] = [
+    {
+      id: 1,
+      name: "Sarah Johnson",
+      avatar: "/avatars/sarah.jpg",
+      lastMessage: "That sounds great! Let's do it 😊",
+      time: "2m ago",
+      online: true,
+    },
+    {
+      id: 2,
+      name: "Dev Team",
+      avatar: "/avatars/team.jpg",
+      lastMessage: "New PR is ready for review",
+      time: "1h ago",
+      online: true,
+      isGroup: true,
+      memberCount: 8,
+    },
+    {
+      id: 3,
+      name: "Alex Chen",
+      avatar: "/avatars/alex.jpg",
+      lastMessage: "Thanks for your help yesterday!",
+      time: "3h ago",
+      online: false,
+    },
+  ];
 
-        <div className="flex-1 space-y-4 overflow-y-auto">
-          {/* Placeholder messages */}
-          <div className="flex items-start space-x-2">
-            <div className="h-8 w-8 rounded-full bg-primary" />
-            <div className="rounded-lg bg-accent p-3">
-              <p>Hey, how are you?</p>
-            </div>
-          </div>
-          <div className="flex items-start justify-end space-x-2">
-            <div className="rounded-lg bg-primary p-3 text-primary-foreground">
-              <p>I'm doing great, thanks! How about you?</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-4 flex items-center space-x-2">
-          <input
-            type="text"
-            placeholder="Type a message..."
-            className="flex-1 rounded-md border px-3 py-2 text-sm"
-          />
-          <button className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground">
-            Send
-          </button>
-        </div>
-      </Card>
-    </div>
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="grid h-full grid-cols-[320px_1fr] gap-0 bg-background/50"
+    >
+      <ChatSidebar
+        conversations={conversations}
+        selectedChat={selectedChat}
+        setSelectedChat={setSelectedChat}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+      />
+      <ChatArea
+        selectedChat={selectedChat}
+        conversations={conversations}
+        message={message}
+        setMessage={setMessage}
+      />
+    </motion.div>
   );
 }

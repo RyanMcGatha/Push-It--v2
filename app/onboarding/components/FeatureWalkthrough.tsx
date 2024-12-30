@@ -10,22 +10,22 @@ interface FeatureWalkthroughProps {
 
 const features = [
   {
-    title: "Dashboard Overview",
+    title: "Real-time Messaging",
     description:
-      "Get a bird's eye view of all your important metrics and activities in one place.",
-    icon: "📊",
+      "Send and receive messages instantly with friends and groups. Experience seamless communication with live typing indicators and delivery status.",
+    icon: "💬",
   },
   {
-    title: "Quick Actions",
+    title: "Rich Media Sharing",
     description:
-      "Access commonly used features and perform actions with just one click.",
-    icon: "⚡",
+      "Share photos, videos, and files effortlessly. Express yourself with emojis, GIFs, and stickers.",
+    icon: "🖼️",
   },
   {
-    title: "Customization",
+    title: "Group Features",
     description:
-      "Personalize your workspace to match your workflow and preferences.",
-    icon: "🎨",
+      "Create group chats, manage members, and coordinate with multiple friends at once. Perfect for planning events or staying in touch.",
+    icon: "👥",
   },
 ];
 
@@ -50,9 +50,11 @@ export function FeatureWalkthrough({
         animate={{ opacity: 1 }}
         className="text-center mb-12"
       >
-        <h2 className="text-3xl font-bold text-gray-900 mb-4">Key Features</h2>
+        <h2 className="text-3xl font-bold text-gray-900 mb-4">
+          Discover Push It!
+        </h2>
         <p className="text-lg text-gray-600">
-          Let's explore what makes our app special
+          Let's explore what makes messaging better with Push It!
         </p>
       </motion.div>
 
