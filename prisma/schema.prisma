@@ -107,6 +107,7 @@ model ChatParticipant {
   userId    String
   chatId    String
   joinedAt  DateTime @default(now())
+  muted     Boolean  @default(false)
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   chat      Chat     @relation(fields: [chatId], references: [id], onDelete: Cascade)
 

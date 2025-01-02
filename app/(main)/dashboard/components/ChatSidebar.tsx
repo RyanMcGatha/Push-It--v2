@@ -34,7 +34,7 @@ interface Chat {
 
 interface ChatSidebarProps {
   selectedChatId: string | null;
-  onSelectChat: (chat: Chat) => void;
+  onSelectChat: (chat: Chat | null) => void;
 }
 
 export default function ChatSidebar({
@@ -46,32 +46,85 @@ export default function ChatSidebar({
   const [searchQuery, setSearchQuery] = useState("");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
+  // Fetch chats on mount
   useEffect(() => {
     fetchChats();
+  }, []);
 
-    // Initialize Pusher
+  // Connect to Pusher
+  useEffect(() => {
+    if (!session?.user?.id) return;
+
     const pusher = new Pusher(process.env.NEXT_PUBLIC_PUSHER_KEY!, {
       cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER!,
     });
 
-    // Subscribe to the chats channel
+    // Subscribe to global chats channel
     const channel = pusher.subscribe("chats");
 
     // Listen for new chats
-    channel.bind("new-chat", (newChat: Chat) => {
-      const chatWithMessages = {
-        ...newChat,
-        messages: newChat.messages || [],
-      };
-      setChats((prev) => [chatWithMessages, ...prev]);
+    channel.bind("new-chat", (chat: Chat) => {
+      setChats((prev) => [chat, ...prev]);
+    });
+
+    // Listen for chat deletions
+    channel.bind("chat-deleted", (data: any) => {
+      setChats((prev) => prev.filter((chat) => chat.id !== data.chatId));
+      if (selectedChatId === data.chatId) {
+        onSelectChat(null);
+      }
+    });
+
+    // Subscribe to individual chat channels
+    chats.forEach((chat) => {
+      const chatChannel = pusher.subscribe(`chat-${chat.id}`);
+
+      // Listen for new messages
+      chatChannel.bind("new-message", (message: Message) => {
+        setChats((prev) =>
+          prev.map((c) => {
+            if (c.id === chat.id) {
+              return {
+                ...c,
+                messages: [message, ...(c.messages || [])],
+              };
+            }
+            return c;
+          })
+        );
+      });
+
+      // Listen for participant leave events
+      chatChannel.bind("participant-left", (data: any) => {
+        setChats((prev) =>
+          prev.map((c) => {
+            if (c.id === chat.id) {
+              return {
+                ...c,
+                participants: c.participants.filter(
+                  (p) => p.user.id !== data.userId
+                ),
+              };
+            }
+            return c;
+          })
+        );
+      });
     });
 
     return () => {
+      // Unsubscribe from global channel
       channel.unbind_all();
       channel.unsubscribe();
+
+      // Unsubscribe from individual chat channels
+      chats.forEach((chat) => {
+        const chatChannel = pusher.unsubscribe(`chat-${chat.id}`);
+      });
+
       pusher.disconnect();
     };
-  }, []);
+  }, [session?.user?.id, chats, selectedChatId, onSelectChat]);
 
   const fetchChats = async () => {
     try {
@@ -103,7 +156,6 @@ export default function ChatSidebar({
       if (!response.ok) throw new Error("Failed to create chat");
 
       const newChat = await response.json();
-      setChats((prev) => [newChat, ...prev]);
       onSelectChat(newChat);
       setIsCreateModalOpen(false);
     } catch (error) {

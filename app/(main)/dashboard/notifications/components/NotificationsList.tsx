@@ -6,6 +6,8 @@ import { formatDistanceToNow } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
+import { useSession } from "next-auth/react";
+import Pusher from "pusher-js";
 
 interface Notification {
   id: string;
@@ -17,28 +19,36 @@ interface Notification {
 }
 
 export default function NotificationsList() {
+  const { data: session } = useSession();
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
   useEffect(() => {
-    fetchNotifications();
-  }, []);
+    if (!session?.user?.id) return;
 
-  const fetchNotifications = async () => {
-    try {
-      const response = await fetch("/api/notifications");
-      const data = await response.json();
-      setNotifications(data);
-    } catch (error) {
+    // Initialize Pusher
+    const pusher = new Pusher(process.env.NEXT_PUBLIC_PUSHER_KEY!, {
+      cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER!,
+    });
+
+    // Subscribe to user's notification channel
+    const channel = pusher.subscribe(`user-${session.user.id}`);
+
+    // Listen for new notifications
+    channel.bind("new-notification", (notification: Notification) => {
+      setNotifications((prev) => [notification, ...prev]);
       toast({
-        title: "Error",
-        description: "Failed to fetch notifications",
+        title: notification.title,
+        description: notification.message,
       });
-    } finally {
-      setLoading(false);
-    }
-  };
+    });
+
+    return () => {
+      channel.unbind_all();
+      channel.unsubscribe();
+      pusher.disconnect();
+    };
+  }, [session?.user?.id]);
 
   const markAsRead = async (id: string) => {
     try {
@@ -69,10 +79,6 @@ export default function NotificationsList() {
       });
     }
   };
-
-  if (loading) {
-    return <div className="text-center">Loading notifications...</div>;
-  }
 
   if (notifications.length === 0) {
     return (

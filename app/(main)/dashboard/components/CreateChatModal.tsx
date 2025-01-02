@@ -64,21 +64,31 @@ export default function CreateChatModal({
     }
   };
 
-  const handleCreateChat = () => {
-    if (selectedTab === "direct" && selectedUsers.length === 1) {
-      onCreateChat(
-        null,
-        selectedUsers.map((u) => u.id)
-      );
-    } else if (
-      selectedTab === "group" &&
-      selectedUsers.length >= 2 &&
-      groupName.trim()
-    ) {
-      onCreateChat(
-        groupName.trim(),
-        selectedUsers.map((u) => u.id)
-      );
+  const handleCreateChat = async () => {
+    try {
+      const participantIds = selectedUsers.map((u) => u.id);
+      const name = selectedTab === "direct" ? null : groupName.trim();
+
+      const response = await fetch("/api/chats", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name,
+          participantIds,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to create chat");
+      }
+
+      // Close the modal after successful creation
+      // The chat will be added via Pusher event
+      onClose();
+    } catch (error) {
+      console.error("Error creating chat:", error);
     }
   };
 

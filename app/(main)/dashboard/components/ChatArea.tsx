@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import Pusher from "pusher-js";
 import {
   Send,
@@ -13,7 +14,24 @@ import {
   Settings,
   MoreVertical,
   MessageSquare,
+  Bell,
+  LogOut,
+  UserPlus,
+  UserMinus,
+  Trash,
+  Volume2,
+  VolumeX,
+  Lock,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { toast } from "react-hot-toast";
 
 interface Message {
   id: string;
@@ -41,8 +59,10 @@ export default function ChatArea({
   participants,
 }: ChatAreaProps) {
   const { data: session } = useSession();
+  const router = useRouter();
   const [messages, setMessages] = useState<Message[]>([]);
   const [message, setMessage] = useState("");
+  const [isMuted, setIsMuted] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const pusherRef = useRef<Pusher | null>(null);
 
@@ -99,15 +119,42 @@ export default function ChatArea({
       scrollToBottom();
     });
 
+    // Listen for chat mute events
+    channel.bind("chat-muted", (data: any) => {
+      if (data.userId === session?.user?.id) {
+        setIsMuted(data.muted);
+      }
+    });
+
+    // Listen for participant leave events
+    channel.bind("participant-left", (data: any) => {
+      toast.success(`${data.userName || "Someone"} left the chat`);
+    });
+
+    // Subscribe to global chats channel for deletion events
+    const globalChannel = pusher.subscribe("chats");
+    globalChannel.bind("chat-deleted", (data: any) => {
+      if (data.chatId === selectedChatId) {
+        toast.success(
+          data.deletedBy?.userId === session?.user?.id
+            ? "You deleted the chat"
+            : `${data.deletedBy?.userName || "Someone"} deleted the chat`
+        );
+        router.push("/dashboard");
+      }
+    });
+
     pusherRef.current = pusher;
 
     // Cleanup when unmounting or when selectedChatId changes
     return () => {
       channel.unbind_all();
       channel.unsubscribe();
+      globalChannel.unbind_all();
+      globalChannel.unsubscribe();
       pusher.disconnect();
     };
-  }, [selectedChatId]);
+  }, [selectedChatId, session?.user?.id, router]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -139,6 +186,43 @@ export default function ChatArea({
       setMessage("");
     } catch (error) {
       console.error("Error sending message:", error);
+    }
+  };
+
+  const handleLeaveChat = async () => {
+    if (!selectedChatId) return;
+    try {
+      await fetch(`/api/chats/${selectedChatId}/leave`, {
+        method: "POST",
+      });
+      router.push("/dashboard");
+    } catch (error) {
+      console.error("Error leaving chat:", error);
+    }
+  };
+
+  const handleDeleteChat = async () => {
+    if (!selectedChatId) return;
+    try {
+      await fetch(`/api/chats/${selectedChatId}`, {
+        method: "DELETE",
+      });
+      router.push("/dashboard");
+    } catch (error) {
+      console.error("Error deleting chat:", error);
+    }
+  };
+
+  const handleToggleMute = async () => {
+    if (!selectedChatId) return;
+    try {
+      await fetch(`/api/chats/${selectedChatId}/mute`, {
+        method: "POST",
+        body: JSON.stringify({ muted: !isMuted }),
+      });
+      setIsMuted(!isMuted);
+    } catch (error) {
+      console.error("Error toggling mute:", error);
     }
   };
 
@@ -175,20 +259,76 @@ export default function ChatArea({
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="p-2 rounded-full hover:bg-accent/80 transition-colors"
-                >
-                  <Settings className="h-5 w-5 text-muted-foreground" />
-                </motion.button>
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="p-2 rounded-full hover:bg-accent/80 transition-colors"
-                >
-                  <MoreVertical className="h-5 w-5 text-muted-foreground" />
-                </motion.button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      className="p-2 rounded-full hover:bg-accent/80 transition-colors"
+                    >
+                      <Settings className="h-5 w-5 text-muted-foreground" />
+                    </motion.button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuLabel>Chat Settings</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleToggleMute}>
+                      {isMuted ? (
+                        <>
+                          <Volume2 className="mr-2" />
+                          <span>Unmute Chat</span>
+                        </>
+                      ) : (
+                        <>
+                          <VolumeX className="mr-2" />
+                          <span>Mute Chat</span>
+                        </>
+                      )}
+                    </DropdownMenuItem>
+                    {isGroup && (
+                      <DropdownMenuItem>
+                        <Lock className="mr-2" />
+                        <span>Privacy Settings</span>
+                      </DropdownMenuItem>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      className="p-2 rounded-full hover:bg-accent/80 transition-colors"
+                    >
+                      <MoreVertical className="h-5 w-5 text-muted-foreground" />
+                    </motion.button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuLabel>More Options</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    {isGroup ? (
+                      <DropdownMenuItem>
+                        <UserPlus className="mr-2" />
+                        <span>Add Participants</span>
+                      </DropdownMenuItem>
+                    ) : null}
+                    <DropdownMenuItem
+                      onClick={handleLeaveChat}
+                      className="text-destructive focus:text-destructive"
+                    >
+                      <UserMinus className="mr-2" />
+                      <span>Leave Chat</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={handleDeleteChat}
+                      className="text-destructive focus:text-destructive"
+                    >
+                      <Trash className="mr-2" />
+                      <span>Delete Chat</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </div>
 

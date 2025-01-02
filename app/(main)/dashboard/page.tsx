@@ -32,7 +32,7 @@ interface Chat {
 export default function DashboardPage() {
   const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
 
-  const handleSelectChat = (chat: Chat) => {
+  const handleSelectChat = (chat: Chat | null) => {
     setSelectedChat(chat);
   };
 

@@ -1,6 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
+import Pusher from "pusher-js";
+import { toast } from "react-hot-toast";
 import { User } from "@prisma/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -12,25 +15,69 @@ interface Friend extends User {
   } | null;
 }
 
+interface FriendRequest {
+  id: string;
+  status: string;
+  sender: Friend;
+  receiver: Friend;
+}
+
 export default function FriendsList() {
+  const { data: session } = useSession();
   const [friends, setFriends] = useState<Friend[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([]);
 
   useEffect(() => {
-    const fetchFriends = async () => {
-      try {
-        const response = await fetch("/api/friends");
-        const data = await response.json();
-        setFriends(data);
-      } catch (error) {
-        console.error("Error fetching friends:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
+    if (!session?.user?.id) return;
 
-    fetchFriends();
-  }, []);
+    // Initialize Pusher
+    const pusher = new Pusher(process.env.NEXT_PUBLIC_PUSHER_KEY!, {
+      cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER!,
+    });
+
+    // Subscribe to user's channel
+    const channel = pusher.subscribe(`user-${session.user.id}`);
+
+    // Listen for friend request events
+    channel.bind("friend-request-sent", (friendship: FriendRequest) => {
+      toast.success(
+        `Friend request sent to ${
+          friendship.receiver.name || friendship.receiver.email
+        }`
+      );
+    });
+
+    channel.bind("friend-request-received", (friendship: FriendRequest) => {
+      setFriendRequests((prev) => [...prev, friendship]);
+      toast.success(
+        `New friend request from ${
+          friendship.sender.name || friendship.sender.email
+        }`
+      );
+    });
+
+    channel.bind("friendship-updated", (friendship: FriendRequest) => {
+      if (friendship.status === "ACCEPTED") {
+        const newFriend =
+          session.user.id === friendship.sender.id
+            ? friendship.receiver
+            : friendship.sender;
+        setFriends((prev) => [...prev, newFriend]);
+        toast.success(
+          `${newFriend.name || newFriend.email} accepted your friend request`
+        );
+      }
+      setFriendRequests((prev) =>
+        prev.filter((req) => req.id !== friendship.id)
+      );
+    });
+
+    return () => {
+      channel.unbind_all();
+      channel.unsubscribe();
+      pusher.disconnect();
+    };
+  }, [session?.user?.id]);
 
   const handleRemoveFriend = async (friendId: string) => {
     try {
@@ -42,10 +89,6 @@ export default function FriendsList() {
       console.error("Error removing friend:", error);
     }
   };
-
-  if (loading) {
-    return <div>Loading...</div>;
-  }
 
   if (friends.length === 0) {
     return (

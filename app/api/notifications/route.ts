@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/auth.config";
 import { prisma } from "@/lib/prisma";
+import { pusher } from "@/lib/pusher";
 
 export async function GET() {
   try {
@@ -70,6 +71,9 @@ export async function POST(req: Request) {
         userId: user.id,
       },
     });
+
+    // Trigger real-time notification update
+    await pusher.trigger(`user-${user.id}`, "new-notification", notification);
 
     return NextResponse.json(notification);
   } catch (error) {
