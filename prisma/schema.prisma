@@ -17,6 +17,11 @@ model User {
   accounts      Account[]
   sessions      Session[]
   profile       Profile?
+  messages      Message[]
+  chats         ChatParticipant[]
+  notifications Notification[]
+  sentFriendRequests     Friendship[] @relation("SentFriendRequests")
+  receivedFriendRequests Friendship[] @relation("ReceivedFriendRequests")
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 }
@@ -75,4 +80,60 @@ model Profile {
   userId         String    @unique
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
+}
+
+model Chat {
+  id          String    @id @default(cuid())
+  name        String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  messages    Message[]
+  participants ChatParticipant[]
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  chatId    String
+  userId    String
+  chat      Chat     @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model ChatParticipant {
+  id        String   @id @default(cuid())
+  userId    String
+  chatId    String
+  joinedAt  DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chat      Chat     @relation(fields: [chatId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, chatId])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  message   String   @db.Text
+  type      String   // e.g., 'message', 'system', 'alert'
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Friendship {
+  id        String   @id @default(cuid())
+  senderId  String
+  receiverId String
+  status    String   // 'pending', 'accepted', 'rejected'
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  sender    User     @relation("SentFriendRequests", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver  User     @relation("ReceivedFriendRequests", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@unique([senderId, receiverId])
 }

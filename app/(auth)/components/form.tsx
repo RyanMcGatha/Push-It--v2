@@ -66,35 +66,24 @@ export function AuthForm({ signup = false }: FormProps) {
 
       if (signup) {
         // Handle signup
-        const response = await fetch("/api/auth/signup", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(values),
+
+        // Sign in the user after successful signup
+        const result = await signIn("credentials", {
+          email: values.email,
+          password: values.password,
+          action: "register",
+          callbackUrl: "/dashboard",
+          redirect: false,
         });
 
-        const data = await response.json();
+        if (result?.error) {
+          toast.error(result.error);
+          return;
+        }
 
-        if (response.ok) {
+        if (result?.url) {
+          router.push(result.url);
           toast.success("Account created successfully!");
-          // Sign in the user after successful signup
-          const result = await signIn("credentials", {
-            email: values.email,
-            password: values.password,
-            action: "register",
-            callbackUrl: "/dashboard",
-            redirect: true,
-          });
-
-          if (result?.error) {
-            toast.error(result.error);
-            return;
-          }
-
-          toast.success("Account created successfully!");
-        } else {
-          toast.error(data.message || "Failed to create account");
         }
       } else {
         // Handle login

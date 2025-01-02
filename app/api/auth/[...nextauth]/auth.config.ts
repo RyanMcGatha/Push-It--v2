@@ -107,7 +107,6 @@ export const authOptions: AuthOptions = {
   pages: {
     signIn: "/login",
     newUser: "/onboarding",
-    error: undefined, // Disable default error page
   },
   callbacks: {
     async session({ session, token }) {

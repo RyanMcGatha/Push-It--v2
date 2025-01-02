@@ -1,8 +1,9 @@
 import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/auth.config";
+import MainNav from "./dashboard/components/MainNav";
 
-export default async function DashboardLayout({
+export default async function MainLayout({
   children,
 }: {
   children: React.ReactNode;
@@ -15,7 +16,10 @@ export default async function DashboardLayout({
 
   return (
     <div className="h-screen">
-      <main className="container mx-auto h-full py-4">{children}</main>
+      <div className="grid h-full grid-cols-[80px_1fr] gap-0 bg-background/50">
+        <MainNav />
+        <main className="h-full py-4">{children}</main>
+      </div>
     </div>
   );
 }
