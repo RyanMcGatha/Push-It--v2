@@ -1,5 +1,13 @@
 import { User } from "next-auth";
 
+export interface ImageSettings {
+  scale: number;
+  position: {
+    x: number;
+    y: number;
+  };
+}
+
 export interface ProfileData {
   user: Pick<User, "name" | "image" | "email">;
   bio: string;
@@ -12,6 +20,8 @@ export interface ProfileData {
   customUrl: string;
   themeColor: string;
   bannerImage: string;
+  bannerSettings?: ImageSettings;
+  profileImageSettings?: ImageSettings;
   layout: string;
   skills: string[];
   achievements: string[];

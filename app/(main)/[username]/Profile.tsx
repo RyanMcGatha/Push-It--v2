@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { useState } from "react";
 import { Pencil } from "lucide-react";
 import { useSession } from "next-auth/react";
-import { ProfileProps } from "./components/types";
+import { ProfileProps, ImageSettings } from "./components/types";
 import { ProfileHeader } from "./components/ProfileHeader";
 import { ProfileSidebar } from "./components/ProfileSidebar";
 import { CustomSections } from "./components/CustomSections";
@@ -12,11 +12,23 @@ import { CustomSections } from "./components/CustomSections";
 export function Profile({ profile: initialProfile }: ProfileProps) {
   const session = useSession();
   const isUser = session.data?.user?.email === initialProfile.user.email;
+  const [profile, setProfile] = useState(initialProfile);
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [profile, setProfile] = useState(initialProfile);
+  const [bannerSettings, setBannerSettings] = useState<ImageSettings>(
+    initialProfile.bannerSettings || {
+      scale: 1,
+      position: { x: 50, y: 50 },
+    }
+  );
+  const [profileSettings, setProfileSettings] = useState<ImageSettings>(
+    initialProfile.profileImageSettings || {
+      scale: 1,
+      position: { x: 50, y: 50 },
+    }
+  );
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -44,12 +56,18 @@ export function Profile({ profile: initialProfile }: ProfileProps) {
     setSuccessMessage(null);
 
     try {
+      const updatedProfile = {
+        ...profile,
+        bannerSettings: bannerSettings,
+        profileImageSettings: profileSettings,
+      };
+
       const response = await fetch("/api/profile", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(profile),
+        body: JSON.stringify(updatedProfile),
       });
 
       if (!response.ok) {
@@ -103,6 +121,10 @@ export function Profile({ profile: initialProfile }: ProfileProps) {
           profile={profile}
           isEditing={isEditing}
           onProfileChange={handleProfileChange}
+          bannerSettings={bannerSettings}
+          profileSettings={profileSettings}
+          onBannerSettingsChange={setBannerSettings}
+          onProfileSettingsChange={setProfileSettings}
         />
 
         <div className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

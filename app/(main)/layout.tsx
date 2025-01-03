@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/auth.config";
 import MainNav from "./dashboard/components/MainNav";
+import { Toaster } from "sonner";
 
 export default async function MainLayout({
   children,
@@ -20,6 +21,7 @@ export default async function MainLayout({
         <MainNav />
         <main className="h-full ">{children}</main>
       </div>
+      <Toaster />
     </div>
   );
 }
