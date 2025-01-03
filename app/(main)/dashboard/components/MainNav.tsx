@@ -3,37 +3,64 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
-import {
-  Home,
-  MessageSquare,
-  User,
-  Settings,
-  Bell,
-  Search,
-  HelpCircle,
-} from "lucide-react";
+import { Home, User, Settings, Bell, HelpCircle, Users } from "lucide-react";
+import { useEffect, useState } from "react";
 
-const navItems = [
-  { href: "/dashboard", label: "Home", icon: Home },
-  { href: "/dashboard/messages", label: "Messages", icon: MessageSquare },
-  { href: "/dashboard/notifications", label: "Notifications", icon: Bell },
-  { href: "/dashboard/search", label: "Search", icon: Search },
-  { href: "/profile", label: "Profile", icon: User },
-  { href: "/settings", label: "Settings", icon: Settings },
-  { href: "/help", label: "Help", icon: HelpCircle },
-];
+interface Profile {
+  customUrl: string;
+}
 
 export default function MainNav() {
   const pathname = usePathname();
+  const [profileUrl, setProfileUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const response = await fetch("/api/me");
+        if (response.ok) {
+          const data = await response.json();
+          if (data.profile?.customUrl) {
+            setProfileUrl(`/${data.profile.customUrl}`);
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching profile:", error);
+      }
+    };
+
+    fetchProfile();
+  }, []);
+
+  const navItems = [
+    { id: "home", href: "/dashboard", label: "Home", icon: Home },
+    {
+      id: "notifications",
+      href: "/dashboard/notifications",
+      label: "Notifications",
+      icon: Bell,
+    },
+    {
+      id: "friends",
+      href: "/dashboard/friends",
+      label: "Friends",
+      icon: Users,
+    },
+    ...(profileUrl
+      ? [{ id: "profile", href: profileUrl, label: "Profile", icon: User }]
+      : []),
+    { id: "settings", href: "/settings", label: "Settings", icon: Settings },
+    { id: "help", href: "/help", label: "Help", icon: HelpCircle },
+  ];
 
   return (
-    <nav className="flex flex-col items-center gap-1 py-4 bg-background/50">
+    <nav className="flex flex-col items-center gap-1 py-4 bg-background border-r border-border/50">
       {navItems.map((item) => {
         const Icon = item.icon;
         const isActive = pathname === item.href;
 
         return (
-          <div key={item.href} className="group relative flex items-center">
+          <div key={item.id} className="group relative flex items-center">
             <Link href={item.href} className="p-2 block">
               <motion.div
                 whileHover={{ scale: 1.1 }}

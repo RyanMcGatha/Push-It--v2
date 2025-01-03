@@ -66,13 +66,11 @@ export function AuthForm({ signup = false }: FormProps) {
 
       if (signup) {
         // Handle signup
-
-        // Sign in the user after successful signup
         const result = await signIn("credentials", {
           email: values.email,
           password: values.password,
           action: "register",
-          callbackUrl: "/dashboard",
+          callbackUrl: "/onboarding",
           redirect: false,
         });
 
@@ -82,7 +80,7 @@ export function AuthForm({ signup = false }: FormProps) {
         }
 
         if (result?.url) {
-          router.push(result.url);
+          router.push("/onboarding");
           toast.success("Account created successfully!");
         }
       } else {

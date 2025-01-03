@@ -85,7 +85,7 @@ export function WelcomeScreen({ onNext, onSkip }: WelcomeScreenProps) {
               font-semibold hover:bg-primary/90 transition-colors duration-200
               focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
           >
-            Let's Get Started
+            Let&apos;s Get Started
           </button>
 
           <div className="mt-4">

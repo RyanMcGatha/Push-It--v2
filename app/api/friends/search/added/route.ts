@@ -6,48 +6,16 @@ import { prisma } from "@/lib/prisma";
 export async function GET(req: Request) {
   try {
     const session = await getServerSession(authOptions);
+    const { searchParams } = new URL(req.url);
+    const query = searchParams.get("q");
 
     if (!session?.user?.id) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    const { searchParams } = new URL(req.url);
-    const query = searchParams.get("query");
-
-    // If no query is provided, return an empty array
-    if (!query) {
-      return NextResponse.json([]);
-    }
-
     const friends = await prisma.user.findMany({
       where: {
         AND: [
-          // Search conditions
-          {
-            OR: [
-              {
-                name: {
-                  contains: query,
-                  mode: "insensitive",
-                },
-              },
-              {
-                email: {
-                  contains: query,
-                  mode: "insensitive",
-                },
-              },
-              {
-                profile: {
-                  displayName: {
-                    contains: query,
-                    mode: "insensitive",
-                  },
-                },
-              },
-            ],
-          },
-          // Friend conditions
           {
             OR: [
               {
@@ -68,6 +36,64 @@ export async function GET(req: Request) {
               },
             ],
           },
+          {
+            OR: [
+              {
+                name: {
+                  contains: query || "",
+                  mode: "insensitive",
+                },
+              },
+              {
+                email: {
+                  contains: query || "",
+                  mode: "insensitive",
+                },
+              },
+              {
+                profile: {
+                  OR: [
+                    {
+                      displayName: {
+                        contains: query || "",
+                        mode: "insensitive",
+                      },
+                    },
+                    {
+                      bio: {
+                        contains: query || "",
+                        mode: "insensitive",
+                      },
+                    },
+                    {
+                      location: {
+                        contains: query || "",
+                        mode: "insensitive",
+                      },
+                    },
+                    {
+                      company: {
+                        contains: query || "",
+                        mode: "insensitive",
+                      },
+                    },
+                    {
+                      jobTitle: {
+                        contains: query || "",
+                        mode: "insensitive",
+                      },
+                    },
+                    {
+                      customUrl: {
+                        contains: query || "",
+                        mode: "insensitive",
+                      },
+                    },
+                  ],
+                },
+              },
+            ],
+          },
         ],
       },
       include: {
@@ -77,7 +103,6 @@ export async function GET(req: Request) {
           },
         },
       },
-      take: 10,
     });
 
     return NextResponse.json(friends);

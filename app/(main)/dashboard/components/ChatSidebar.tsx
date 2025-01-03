@@ -7,6 +7,7 @@ import { useSession } from "next-auth/react";
 import LogoutButton from "./logout-button";
 import CreateChatModal from "./CreateChatModal";
 import Pusher from "pusher-js";
+import { toast } from "react-hot-toast";
 
 interface User {
   id: string;
@@ -35,6 +36,14 @@ interface Chat {
 interface ChatSidebarProps {
   selectedChatId: string | null;
   onSelectChat: (chat: Chat | null) => void;
+}
+
+interface ChatDeletionData {
+  chatId: string;
+}
+
+interface ParticipantLeftData {
+  userId: string;
 }
 
 export default function ChatSidebar({
@@ -68,7 +77,7 @@ export default function ChatSidebar({
     });
 
     // Listen for chat deletions
-    channel.bind("chat-deleted", (data: any) => {
+    channel.bind("chat-deleted", (data: ChatDeletionData) => {
       setChats((prev) => prev.filter((chat) => chat.id !== data.chatId));
       if (selectedChatId === data.chatId) {
         onSelectChat(null);
@@ -95,7 +104,7 @@ export default function ChatSidebar({
       });
 
       // Listen for participant leave events
-      chatChannel.bind("participant-left", (data: any) => {
+      chatChannel.bind("participant-left", (data: ParticipantLeftData) => {
         setChats((prev) =>
           prev.map((c) => {
             if (c.id === chat.id) {
@@ -119,7 +128,7 @@ export default function ChatSidebar({
 
       // Unsubscribe from individual chat channels
       chats.forEach((chat) => {
-        const chatChannel = pusher.unsubscribe(`chat-${chat.id}`);
+        pusher.unsubscribe(`chat-${chat.id}`);
       });
 
       pusher.disconnect();
@@ -153,13 +162,19 @@ export default function ChatSidebar({
         }),
       });
 
-      if (!response.ok) throw new Error("Failed to create chat");
+      const data = await response.json();
 
-      const newChat = await response.json();
-      onSelectChat(newChat);
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to create chat");
+      }
+
+      onSelectChat(data);
       setIsCreateModalOpen(false);
     } catch (error) {
       console.error("Error creating chat:", error);
+      toast.error(
+        error instanceof Error ? error.message : "Failed to create chat"
+      );
     }
   };
 
@@ -195,7 +210,7 @@ export default function ChatSidebar({
 
   return (
     <>
-      <div className="flex flex-col border-r border-border/50 bg-card/50">
+      <div className="flex flex-col border-r border-border/50 bg-background">
         <motion.div
           initial={{ y: -20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}

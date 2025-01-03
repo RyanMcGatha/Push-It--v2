@@ -1,15 +1,20 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useState, useEffect, useCallback } from "react";
+import { motion } from "framer-motion";
 import { X, Users, MessageSquare, Search } from "lucide-react";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
+import debounce from "lodash/debounce";
 
 interface User {
   id: string;
   name: string | null;
+  email: string | null;
   image: string | null;
+  profile?: {
+    displayName: string | null;
+  };
 }
 
 interface CreateChatModalProps {
@@ -28,27 +33,53 @@ export default function CreateChatModal({
   const [selectedUsers, setSelectedUsers] = useState<User[]>([]);
   const [groupName, setGroupName] = useState("");
   const [users, setUsers] = useState<User[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
+  // Debounced fetch function
+  const debouncedFetch = useCallback(
+    debounce(async (query: string) => {
+      if (!query.trim()) {
+        setUsers([]);
+        return;
+      }
+
+      setIsLoading(true);
+      try {
+        const response = await fetch(
+          `/api/friends/search/added?q=${encodeURIComponent(query)}`
+        );
+        if (!response.ok) throw new Error("Failed to fetch users");
+        const data = await response.json();
+        setUsers(data);
+      } catch (error) {
+        console.error("Error fetching users:", error);
+        setUsers([]);
+      } finally {
+        setIsLoading(false);
+      }
+    }, 300),
+    []
+  );
+
+  // Fetch users when search query changes
   useEffect(() => {
     if (isOpen) {
-      fetchUsers();
+      debouncedFetch(searchQuery);
+    }
+    return () => {
+      debouncedFetch.cancel();
+    };
+  }, [searchQuery, isOpen, debouncedFetch]);
+
+  // Reset state when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      setSearchQuery("");
+      setSelectedUsers([]);
+      setGroupName("");
+      setUsers([]);
     }
   }, [isOpen]);
-
-  // Fetch users when modal opens
-  const fetchUsers = async () => {
-    try {
-      const endpoint = searchQuery
-        ? `/api/friends/search/added?query=${searchQuery}`
-        : "/api/friends";
-      const response = await fetch(endpoint);
-      if (!response.ok) throw new Error("Failed to fetch users");
-      const data = await response.json();
-      setUsers(data);
-    } catch (error) {
-      console.error("Error fetching users:", error);
-    }
-  };
 
   const handleUserSelect = (user: User) => {
     if (selectedTab === "direct" && selectedUsers.length >= 1) {
@@ -65,37 +96,25 @@ export default function CreateChatModal({
   };
 
   const handleCreateChat = async () => {
-    try {
-      const participantIds = selectedUsers.map((u) => u.id);
-      const name = selectedTab === "direct" ? null : groupName.trim();
-
-      const response = await fetch("/api/chats", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          name,
-          participantIds,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to create chat");
-      }
-
-      // Close the modal after successful creation
-      // The chat will be added via Pusher event
-      onClose();
-    } catch (error) {
-      console.error("Error creating chat:", error);
-    }
+    const participantIds = selectedUsers.map((user) => user.id);
+    const chatName = selectedTab === "group" ? groupName : null;
+    onCreateChat(chatName, participantIds);
+    onClose();
   };
 
   const isCreateDisabled =
     (selectedTab === "direct" && selectedUsers.length !== 1) ||
     (selectedTab === "group" &&
       (selectedUsers.length < 2 || !groupName.trim()));
+
+  const getDisplayName = (user: User) => {
+    return (
+      user.profile?.displayName ||
+      user.name ||
+      user.email?.split("@")[0] ||
+      "Unknown"
+    );
+  };
 
   if (!isOpen) return null;
 
@@ -155,10 +174,7 @@ export default function CreateChatModal({
                 <input
                   type="text"
                   value={searchQuery}
-                  onChange={(e) => {
-                    setSearchQuery(e.target.value);
-                    fetchUsers();
-                  }}
+                  onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder={`Search ${
                     selectedTab === "direct" ? "friends" : "participants"
                   }...`}
@@ -173,7 +189,7 @@ export default function CreateChatModal({
                       key={user.id}
                       className="flex items-center gap-1 bg-primary/20 text-primary rounded-full px-3 py-1 text-sm"
                     >
-                      <span>{user.name}</span>
+                      <span>{getDisplayName(user)}</span>
                       <button
                         onClick={() => handleUserSelect(user)}
                         className="hover:bg-primary/30 rounded-full p-1"
@@ -186,28 +202,43 @@ export default function CreateChatModal({
               )}
 
               <div className="h-[200px] overflow-y-auto space-y-2">
-                {users.map((user) => (
-                  <motion.div
-                    key={user.id}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors ${
-                      selectedUsers.some((u) => u.id === user.id)
-                        ? "bg-primary/20"
-                        : "hover:bg-accent/80"
-                    }`}
-                    onClick={() => handleUserSelect(user)}
-                  >
-                    <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center">
-                      <span className="text-sm font-medium text-primary">
-                        {user.name?.charAt(0) || "?"}
-                      </span>
-                    </div>
-                    <div>
-                      <p className="font-medium">{user.name}</p>
-                    </div>
-                  </motion.div>
-                ))}
+                {isLoading ? (
+                  <div className="flex items-center justify-center h-full text-sm text-muted-foreground">
+                    Loading...
+                  </div>
+                ) : users.length === 0 && searchQuery.trim() ? (
+                  <div className="flex items-center justify-center h-full text-sm text-muted-foreground">
+                    No users found
+                  </div>
+                ) : (
+                  users.map((user) => (
+                    <motion.div
+                      key={user.id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors ${
+                        selectedUsers.some((u) => u.id === user.id)
+                          ? "bg-primary/20"
+                          : "hover:bg-accent/80"
+                      }`}
+                      onClick={() => handleUserSelect(user)}
+                    >
+                      <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center">
+                        <span className="text-sm font-medium text-primary">
+                          {getDisplayName(user).charAt(0).toUpperCase()}
+                        </span>
+                      </div>
+                      <div>
+                        <p className="font-medium">{getDisplayName(user)}</p>
+                        {user.email && (
+                          <p className="text-sm text-muted-foreground">
+                            {user.email}
+                          </p>
+                        )}
+                      </div>
+                    </motion.div>
+                  ))
+                )}
               </div>
             </div>
           </Tabs>

@@ -15,10 +15,10 @@ export default async function MainLayout({
   }
 
   return (
-    <div className="h-screen">
-      <div className="grid h-full grid-cols-[80px_1fr] gap-0 bg-background/50">
+    <div className="h-screen bg-background bg-texture">
+      <div className="grid h-full grid-cols-[80px_1fr] gap-0 ">
         <MainNav />
-        <main className="h-full py-4">{children}</main>
+        <main className="h-full ">{children}</main>
       </div>
     </div>
   );

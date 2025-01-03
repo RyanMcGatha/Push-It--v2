@@ -111,6 +111,38 @@ export async function POST(
       },
     });
 
+    // Get all participants except the sender to create notifications
+    const participants = await prisma.chatParticipant.findMany({
+      where: {
+        chatId,
+        NOT: {
+          userId: session.user.id,
+        },
+        muted: false, // Don't create notifications for muted participants
+      },
+      include: {
+        user: true,
+      },
+    });
+
+    // Create notifications for each participant
+    await Promise.all(
+      participants.map((participant) =>
+        prisma.notification.create({
+          data: {
+            userId: participant.userId,
+            title: "New Message",
+            message: `${
+              session.user.name || "Someone"
+            } sent a message: ${content.substring(0, 50)}${
+              content.length > 50 ? "..." : ""
+            }`,
+            type: "message",
+          },
+        })
+      )
+    );
+
     // Trigger the new message event on Pusher
     await pusher.trigger(`chat-${chatId}`, "new-message", message);
 

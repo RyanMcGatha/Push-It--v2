@@ -1,4 +1,3 @@
-import { useState } from "react";
 import FriendsList from "./FriendsList";
 import FriendRequests from "./FriendRequests";
 import AddFriend from "./AddFriend";

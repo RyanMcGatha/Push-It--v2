@@ -14,6 +14,63 @@ export async function POST(request: Request) {
   try {
     const { name, participantIds } = await request.json();
 
+    // For direct chats (no name and exactly one participant), check if a chat already exists
+    if (!name && participantIds.length === 1) {
+      const existingChat = await prisma.chat.findFirst({
+        where: {
+          name: null,
+          AND: [
+            {
+              participants: {
+                some: {
+                  userId: session.user.id,
+                },
+              },
+            },
+            {
+              participants: {
+                some: {
+                  userId: participantIds[0],
+                },
+              },
+            },
+            {
+              participants: {
+                every: {
+                  userId: {
+                    in: [session.user.id, participantIds[0]],
+                  },
+                },
+              },
+            },
+          ],
+        },
+        include: {
+          participants: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  name: true,
+                  image: true,
+                },
+              },
+            },
+          },
+        },
+      });
+
+      if (existingChat) {
+        return NextResponse.json(
+          {
+            status: "error",
+            error: "Chat already exists",
+          },
+          { status: 400 }
+        );
+      }
+    }
+
     // Create a new chat
     const chat = await prisma.chat.create({
       data: {
@@ -46,11 +103,14 @@ export async function POST(request: Request) {
     return NextResponse.json(chat);
   } catch (error) {
     console.error("Error creating chat:", error);
-    return new NextResponse("Internal Server Error", { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to create chat. Please try again later." },
+      { status: 500 }
+    );
   }
 }
 
-export async function GET(request: Request) {
+export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     return new NextResponse("Unauthorized", { status: 401 });

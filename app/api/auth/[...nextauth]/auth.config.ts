@@ -6,6 +6,19 @@ import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { AuthOptions } from "next-auth";
 
+// Extend the built-in session types
+declare module "next-auth" {
+  interface Session {
+    user: {
+      id: string;
+      name?: string | null;
+      email?: string | null;
+      image?: string | null;
+      customUrl?: string | null;
+    };
+  }
+}
+
 const signUpSchema = z.object({
   email: z.string().email("Invalid email format"),
   password: z
@@ -112,10 +125,19 @@ export const authOptions: AuthOptions = {
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.sub!;
+
+        // Fetch the user's profile to get the custom URL
+        const userProfile = await prisma.profile.findUnique({
+          where: { userId: token.sub! },
+          select: { customUrl: true },
+        });
+
+        // Add the custom URL to the session
+        session.user.customUrl = userProfile?.customUrl || null;
       }
       return session;
     },
-    async jwt({ token, user, account }) {
+    async jwt({ token, user }) {
       if (user) {
         token.sub = user.id;
       }

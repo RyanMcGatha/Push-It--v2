@@ -26,7 +26,7 @@ export default function OnboardingPage() {
           setCurrentStep(data.onboardingStep);
         }
       });
-  }, []);
+  }, [router]);
 
   const updateProgress = async (step: string) => {
     await fetch("/api/onboarding/progress", {

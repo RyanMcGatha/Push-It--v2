@@ -63,6 +63,7 @@ model VerificationToken {
 
 model Profile {
   id              String    @id @default(cuid())
+  userId          String    @unique
   bio             String?   @db.Text
   location        String?
   website         String?
@@ -70,16 +71,22 @@ model Profile {
   githubHandle    String?
   company         String?
   jobTitle        String?
-  dateOfBirth     DateTime?
   phoneNumber     String?
   displayName     String?
   profileComplete Boolean   @default(false)
   onboardingComplete Boolean @default(false)
   onboardingStep    String? @default("welcome") // Possible values: welcome, personalization, features, completion
-  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId         String    @unique
+  // New creative fields
+  customUrl      String?   @unique
+  themeColor     String?
+  bannerImage    String?
+  layout         String?
+  skills         String[]
+  achievements   String[]
+  customSections Json?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Chat {
@@ -121,6 +128,7 @@ model Notification {
   message   String   @db.Text
   type      String   // e.g., 'message', 'system', 'alert'
   read      Boolean  @default(false)
+  count     Int      @default(1)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)

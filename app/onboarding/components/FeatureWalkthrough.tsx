@@ -54,7 +54,7 @@ export function FeatureWalkthrough({
           Discover Push It!
         </h2>
         <p className="text-lg text-gray-600">
-          Let's explore what makes messaging better with Push It!
+          Let&apos;s explore what makes messaging better with Push It!
         </p>
       </motion.div>
 

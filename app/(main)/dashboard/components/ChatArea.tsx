@@ -21,7 +21,8 @@ import {
   Trash,
   Volume2,
   VolumeX,
-  Lock,
+  Sun,
+  Moon,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -30,8 +31,15 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuPortal,
+  DropdownMenuSubContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
 } from "@/components/ui/dropdown-menu";
 import { toast } from "react-hot-toast";
+import { Switch } from "@/components/ui/switch";
 
 interface Message {
   id: string;
@@ -45,6 +53,16 @@ interface Message {
   };
 }
 
+interface ChatSettings {
+  theme: "light" | "dark" | "system";
+  fontSize: "small" | "medium" | "large";
+  notifications: {
+    sound: boolean;
+    desktop: boolean;
+    mentions: boolean;
+  };
+}
+
 interface ChatAreaProps {
   selectedChatId: string | null;
   selectedChatName: string | null;
@@ -52,10 +70,37 @@ interface ChatAreaProps {
   participants?: { user: { id: string; name: string | null } }[];
 }
 
+const FONT_SIZES = {
+  small: "0.875rem",
+  medium: "1rem",
+  large: "1.125rem",
+};
+
+interface MessageData {
+  id?: string;
+  userId: string;
+  content: string;
+  chatId: string;
+  createdAt: string;
+}
+
+interface ChatParticipant {
+  userId: string;
+  userName: string;
+}
+
+interface ChatDeletionData {
+  chatId: string;
+  deletedBy: {
+    userId: string;
+    userName: string;
+  };
+}
+
 export default function ChatArea({
   selectedChatId,
   selectedChatName,
-  isGroup,
+  isGroup = false,
   participants,
 }: ChatAreaProps) {
   const { data: session } = useSession();
@@ -66,6 +111,86 @@ export default function ChatArea({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const pusherRef = useRef<Pusher | null>(null);
 
+  console.log(isGroup);
+  // Chat settings state
+  const [chatSettings, setChatSettings] = useState<ChatSettings>(() => {
+    // Try to load settings from localStorage
+    const savedSettings = localStorage.getItem("chatSettings");
+    if (savedSettings) {
+      return JSON.parse(savedSettings);
+    }
+    // Default settings
+    return {
+      theme: "system",
+      fontSize: "medium",
+      notifications: {
+        sound: true,
+        desktop: true,
+        mentions: true,
+      },
+    };
+  });
+
+  // Save settings to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem("chatSettings", JSON.stringify(chatSettings));
+  }, [chatSettings]);
+
+  // Apply font size to messages container
+  useEffect(() => {
+    const messagesContainer = document.querySelector(".messages-container");
+    if (messagesContainer) {
+      (messagesContainer as HTMLElement).style.fontSize =
+        FONT_SIZES[chatSettings.fontSize];
+    }
+  }, [chatSettings.fontSize]);
+
+  const handleThemeChange = (theme: "light" | "dark" | "system") => {
+    setChatSettings((prevSettings) => ({ ...prevSettings, theme }));
+    // Apply theme class to the chat container
+    document.documentElement.setAttribute("data-theme", theme);
+    toast.success(`Theme changed to ${theme} mode`);
+  };
+
+  const handleFontSizeChange = (size: "small" | "medium" | "large") => {
+    setChatSettings((prevSettings) => ({ ...prevSettings, fontSize: size }));
+    toast.success(`Font size changed to ${size}`);
+  };
+
+  const handleNotificationChange = (
+    type: keyof ChatSettings["notifications"]
+  ) => {
+    setChatSettings((prev) => {
+      const newSettings = {
+        ...prev,
+        notifications: {
+          ...prev.notifications,
+          [type]: !prev.notifications[type],
+        },
+      };
+
+      // If enabling desktop notifications, request permission
+      if (type === "desktop" && !prev.notifications.desktop) {
+        if ("Notification" in window) {
+          Notification.requestPermission().then((permission) => {
+            if (permission !== "granted") {
+              // If permission denied, keep desktop notifications disabled
+              setChatSettings((prev) => ({
+                ...prev,
+                notifications: {
+                  ...prev.notifications,
+                  desktop: false,
+                },
+              }));
+            }
+          });
+        }
+      }
+
+      return newSettings;
+    });
+  };
+
   // 1. Fetch existing messages when chat is selected
   useEffect(() => {
     if (!selectedChatId) return;
@@ -75,7 +200,7 @@ export default function ChatArea({
         const response = await fetch(`/api/chats/${selectedChatId}/messages`);
         if (!response.ok) throw new Error("Failed to fetch messages");
         const data = await response.json();
-        const adapted = data.map((msg: any) => ({
+        const adapted = data.map((msg: MessageData) => ({
           ...msg,
           user: {
             id: msg.userId,
@@ -104,11 +229,12 @@ export default function ChatArea({
     const channel = pusher.subscribe(`chat-${selectedChatId}`);
 
     // Listen for new messages
-    channel.bind("new-message", (data: any) => {
+    channel.bind("new-message", (data: MessageData) => {
       setMessages((prev) => [
         ...prev,
         {
           ...data,
+          id: data.id || `msg-${Date.now()}-${Math.random()}`,
           user: {
             id: data.userId,
             name: "Unknown",
@@ -116,24 +242,49 @@ export default function ChatArea({
           },
         },
       ]);
+
+      // Only show notification if the message is from someone else and the chat settings allow it
+      if (
+        data.userId !== session?.user?.id &&
+        chatSettings.notifications.desktop
+      ) {
+        // Show desktop notification if the window is not focused
+        if (
+          document.visibilityState !== "visible" &&
+          "Notification" in window &&
+          Notification.permission === "granted"
+        ) {
+          new Notification("New Message", {
+            body: data.content,
+            icon: "/pushitt.png",
+          });
+        }
+
+        // Play notification sound if enabled
+        if (chatSettings.notifications.sound) {
+          const audio = new Audio("/notification-sound.mp3");
+          audio.play().catch(console.error);
+        }
+      }
+
       scrollToBottom();
     });
 
     // Listen for chat mute events
-    channel.bind("chat-muted", (data: any) => {
+    channel.bind("chat-muted", (data: { userId: string; muted: boolean }) => {
       if (data.userId === session?.user?.id) {
         setIsMuted(data.muted);
       }
     });
 
     // Listen for participant leave events
-    channel.bind("participant-left", (data: any) => {
+    channel.bind("participant-left", (data: ChatParticipant) => {
       toast.success(`${data.userName || "Someone"} left the chat`);
     });
 
     // Subscribe to global chats channel for deletion events
     const globalChannel = pusher.subscribe("chats");
-    globalChannel.bind("chat-deleted", (data: any) => {
+    globalChannel.bind("chat-deleted", (data: ChatDeletionData) => {
       if (data.chatId === selectedChatId) {
         toast.success(
           data.deletedBy?.userId === session?.user?.id
@@ -227,7 +378,7 @@ export default function ChatArea({
   };
 
   return (
-    <div className="flex flex-col bg-gradient-to-b from-background to-background/95">
+    <div className="flex flex-col">
       <motion.div
         initial={{ y: -20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
@@ -236,7 +387,7 @@ export default function ChatArea({
         {selectedChatId ? (
           <>
             {/* Header */}
-            <div className="px-6 py-4 border-b border-border/50 flex items-center justify-between">
+            <div className="px-6 py-4 border-b border-border/50 flex items-center justify-between bg-background">
               <div className="flex items-center space-x-4">
                 <div className="relative">
                   <div className="h-12 w-12 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 ring-2 ring-background overflow-hidden flex items-center justify-center">
@@ -285,10 +436,113 @@ export default function ChatArea({
                         </>
                       )}
                     </DropdownMenuItem>
-                    {isGroup && (
-                      <DropdownMenuItem>
-                        <Lock className="mr-2" />
-                        <span>Privacy Settings</span>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuLabel>Appearance</DropdownMenuLabel>
+                    <DropdownMenuSub>
+                      <DropdownMenuSubTrigger>
+                        <Settings className="mr-2 h-4 w-4" />
+                        <span>Chat Theme</span>
+                      </DropdownMenuSubTrigger>
+                      <DropdownMenuPortal>
+                        <DropdownMenuSubContent>
+                          <DropdownMenuRadioGroup
+                            value={chatSettings.theme}
+                            onValueChange={(value) =>
+                              handleThemeChange(
+                                value as "light" | "dark" | "system"
+                              )
+                            }
+                          >
+                            <DropdownMenuRadioItem value="light">
+                              <Sun className="mr-2 h-4 w-4" />
+                              Light
+                            </DropdownMenuRadioItem>
+                            <DropdownMenuRadioItem value="dark">
+                              <Moon className="mr-2 h-4 w-4" />
+                              Dark
+                            </DropdownMenuRadioItem>
+                            <DropdownMenuRadioItem value="system">
+                              <Settings className="mr-2 h-4 w-4" />
+                              System
+                            </DropdownMenuRadioItem>
+                          </DropdownMenuRadioGroup>
+                        </DropdownMenuSubContent>
+                      </DropdownMenuPortal>
+                    </DropdownMenuSub>
+                    <DropdownMenuSub>
+                      <DropdownMenuSubTrigger>
+                        <span className="mr-2 text-lg">Aa</span>
+                        <span>Font Size</span>
+                      </DropdownMenuSubTrigger>
+                      <DropdownMenuPortal>
+                        <DropdownMenuSubContent>
+                          <DropdownMenuRadioGroup
+                            value={chatSettings.fontSize}
+                            onValueChange={(value) =>
+                              handleFontSizeChange(
+                                value as "small" | "medium" | "large"
+                              )
+                            }
+                          >
+                            <DropdownMenuRadioItem value="small">
+                              Small
+                            </DropdownMenuRadioItem>
+                            <DropdownMenuRadioItem value="medium">
+                              Medium
+                            </DropdownMenuRadioItem>
+                            <DropdownMenuRadioItem value="large">
+                              Large
+                            </DropdownMenuRadioItem>
+                          </DropdownMenuRadioGroup>
+                        </DropdownMenuSubContent>
+                      </DropdownMenuPortal>
+                    </DropdownMenuSub>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuLabel>Notifications</DropdownMenuLabel>
+                    <DropdownMenuSub>
+                      <DropdownMenuSubTrigger>
+                        <Bell className="mr-2 h-4 w-4" />
+                        <span>Custom Alerts</span>
+                      </DropdownMenuSubTrigger>
+                      <DropdownMenuPortal>
+                        <DropdownMenuSubContent className="w-56">
+                          <div className="p-2">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-sm">Sound</span>
+                              <Switch
+                                checked={chatSettings.notifications.sound}
+                                onCheckedChange={() =>
+                                  handleNotificationChange("sound")
+                                }
+                              />
+                            </div>
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-sm">Desktop</span>
+                              <Switch
+                                checked={chatSettings.notifications.desktop}
+                                onCheckedChange={() =>
+                                  handleNotificationChange("desktop")
+                                }
+                              />
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm">Mentions</span>
+                              <Switch
+                                checked={chatSettings.notifications.mentions}
+                                onCheckedChange={() =>
+                                  handleNotificationChange("mentions")
+                                }
+                              />
+                            </div>
+                          </div>
+                        </DropdownMenuSubContent>
+                      </DropdownMenuPortal>
+                    </DropdownMenuSub>
+                    <DropdownMenuSeparator />
+                    {isGroup === true && (
+                      <DropdownMenuItem onClick={handleLeaveChat}>
+                        <LogOut className="mr-2 h-4 w-4" />
+                        <span>Leave Chat</span>
                       </DropdownMenuItem>
                     )}
                   </DropdownMenuContent>
@@ -307,18 +561,20 @@ export default function ChatArea({
                     <DropdownMenuLabel>More Options</DropdownMenuLabel>
                     <DropdownMenuSeparator />
                     {isGroup ? (
-                      <DropdownMenuItem>
-                        <UserPlus className="mr-2" />
-                        <span>Add Participants</span>
-                      </DropdownMenuItem>
+                      <>
+                        <DropdownMenuItem>
+                          <UserPlus className="mr-2" />
+                          <span>Add Participants</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={handleLeaveChat}
+                          className="text-destructive focus:text-destructive"
+                        >
+                          <UserMinus className="mr-2" />
+                          <span>Leave Chat</span>
+                        </DropdownMenuItem>
+                      </>
                     ) : null}
-                    <DropdownMenuItem
-                      onClick={handleLeaveChat}
-                      className="text-destructive focus:text-destructive"
-                    >
-                      <UserMinus className="mr-2" />
-                      <span>Leave Chat</span>
-                    </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
                       onClick={handleDeleteChat}
@@ -333,7 +589,7 @@ export default function ChatArea({
             </div>
 
             {/* Chat messages */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+            <div className="flex-1 overflow-y-auto p-6 space-y-6 messages-container">
               <AnimatePresence>
                 {messages.map((msg) => (
                   <motion.div
@@ -380,7 +636,7 @@ export default function ChatArea({
             {/* Input form */}
             <form
               onSubmit={sendMessage}
-              className="p-4 border-t border-border/50"
+              className="p-4 border-t border-border/50 bg-background"
             >
               <motion.div
                 initial={{ y: 20, opacity: 0 }}

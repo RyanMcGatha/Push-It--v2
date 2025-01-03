@@ -1,20 +1,23 @@
 "use client";
 
-import { motion } from "framer-motion";
+import NotificationSettings from "./components/NotificationSettings";
 
 export default function SettingsPage() {
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      className="container max-w-4xl mx-auto py-8"
-    >
-      <h1 className="text-3xl font-bold mb-8">Settings</h1>
-      <div className="bg-card rounded-lg p-6 shadow-sm">
-        <p className="text-muted-foreground">
-          Settings page content coming soon...
-        </p>
+    <div className="container max-w-4xl py-6 lg:py-10">
+      <div className="flex flex-col gap-8">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
+          <p className="text-muted-foreground">
+            Manage your account settings and preferences
+          </p>
+        </div>
+
+        <div className="space-y-8">
+          <NotificationSettings />
+          {/* Add other settings sections here */}
+        </div>
       </div>
-    </motion.div>
+    </div>
   );
 }

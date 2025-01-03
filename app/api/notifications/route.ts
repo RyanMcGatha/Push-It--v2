@@ -10,19 +10,17 @@ export async function GET() {
     console.log("Session state:", {
       exists: !!session,
       user: session?.user,
-      email: session?.user?.email,
+      id: session?.user?.id,
     });
 
-    if (!session?.user?.email) {
-      console.log("Auth failed - no session or email");
+    if (!session?.user?.id) {
+      console.log("Auth failed - no session or user ID");
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
     const notifications = await prisma.notification.findMany({
       where: {
-        user: {
-          email: session.user.email,
-        },
+        userId: session.user.id,
       },
       orderBy: {
         createdAt: "desc",
@@ -30,7 +28,7 @@ export async function GET() {
       include: {
         user: {
           select: {
-            email: true,
+            id: true,
             name: true,
           },
         },
@@ -63,16 +61,66 @@ export async function POST(req: Request) {
       return new NextResponse("User not found", { status: 404 });
     }
 
+    // Check for similar notifications in the last minute to prevent spam
+    const recentSimilarNotification = await prisma.notification.findFirst({
+      where: {
+        userId: user.id,
+        type: type,
+        title: title,
+        createdAt: {
+          gte: new Date(Date.now() - 60000), // Last minute
+        },
+      },
+    });
+
+    if (recentSimilarNotification) {
+      // Update existing notification instead of creating a new one
+      const updatedNotification = await prisma.notification.update({
+        where: {
+          id: recentSimilarNotification.id,
+        },
+        data: {
+          count: {
+            increment: 1,
+          },
+          message:
+            type === "message" ? `You have multiple new messages` : message,
+          updatedAt: new Date(),
+        },
+      });
+
+      // Trigger real-time notification update
+      console.log(
+        "Triggering notification-updated event for user:",
+        user.id,
+        updatedNotification
+      );
+      await pusher.trigger(
+        `user-${user.id}`,
+        "notification-updated",
+        updatedNotification
+      );
+
+      return NextResponse.json(updatedNotification);
+    }
+
+    // Create new notification if no recent similar ones exist
     const notification = await prisma.notification.create({
       data: {
         title,
         message,
         type,
         userId: user.id,
+        count: 1,
       },
     });
 
     // Trigger real-time notification update
+    console.log(
+      "Triggering new-notification event for user:",
+      user.id,
+      notification
+    );
     await pusher.trigger(`user-${user.id}`, "new-notification", notification);
 
     return NextResponse.json(notification);

@@ -6,10 +6,12 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/auth.config";
 
 export async function POST(
   req: Request,
-  { params }: { params: { requestId: string } }
+  context: { params: { requestId: string } }
 ) {
   try {
     const session = await getServerSession(authOptions);
+    const params = context.params;
+    const requestId = params.requestId;
 
     if (!session?.user?.id) {
       return new NextResponse("Unauthorized", { status: 401 });
@@ -17,7 +19,7 @@ export async function POST(
 
     const friendRequest = await prisma.friendship.findUnique({
       where: {
-        id: params.requestId,
+        id: requestId,
       },
     });
 
@@ -31,7 +33,7 @@ export async function POST(
 
     const updatedRequest = await prisma.friendship.update({
       where: {
-        id: params.requestId,
+        id: requestId,
       },
       data: {
         status: "accepted",
