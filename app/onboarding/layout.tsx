@@ -1,11 +1,20 @@
-export default function OnboardingLayout({
+import { getServerSession } from "next-auth";
+import { redirect } from "next/navigation";
+import { authOptions } from "../api/auth/[...nextauth]/auth.config";
+
+export default async function OnboardingLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const session = await getServerSession(authOptions);
+
+  if (!session) {
+    redirect("/login");
+  }
   return (
-    <main className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <div className="w-full">{children}</div>
+    <main className="min-h-screen bg-background bg-texture flex items-center justify-center p-12">
+      {children}
     </main>
   );
 }

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 
 import { prisma } from "@/lib/prisma";
+import { pusher } from "@/lib/pusher";
 import { authOptions } from "@/app/api/auth/[...nextauth]/auth.config";
 
 export async function POST(
@@ -18,6 +19,26 @@ export async function POST(
     const friendRequest = await prisma.friendship.findUnique({
       where: {
         id: params.requestId,
+      },
+      include: {
+        sender: {
+          include: {
+            profile: {
+              select: {
+                displayName: true,
+              },
+            },
+          },
+        },
+        receiver: {
+          include: {
+            profile: {
+              select: {
+                displayName: true,
+              },
+            },
+          },
+        },
       },
     });
 
@@ -36,10 +57,30 @@ export async function POST(
       data: {
         status: "rejected",
       },
+      include: {
+        sender: {
+          include: {
+            profile: {
+              select: {
+                displayName: true,
+              },
+            },
+          },
+        },
+        receiver: {
+          include: {
+            profile: {
+              select: {
+                displayName: true,
+              },
+            },
+          },
+        },
+      },
     });
 
     // Create notification for the sender
-    await prisma.notification.create({
+    const notification = await prisma.notification.create({
       data: {
         userId: friendRequest.senderId,
         title: "Friend Request Rejected",
@@ -49,6 +90,25 @@ export async function POST(
         type: "friend_request_rejected",
       },
     });
+
+    // Trigger real-time updates for both users
+    await pusher.trigger(
+      `user-${friendRequest.senderId}`,
+      "friendship-updated",
+      updatedRequest
+    );
+    await pusher.trigger(
+      `user-${friendRequest.receiverId}`,
+      "friendship-updated",
+      updatedRequest
+    );
+
+    // Trigger real-time notification
+    await pusher.trigger(
+      `user-${friendRequest.senderId}-notifications`,
+      "new-notification",
+      notification
+    );
 
     return NextResponse.json(updatedRequest);
   } catch (error) {

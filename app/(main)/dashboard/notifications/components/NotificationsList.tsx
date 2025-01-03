@@ -1,231 +1,37 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
-import { Bell, Check, Trash2 } from "lucide-react";
+import { Bell, Check, Trash2, Loader2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { useToast } from "@/components/ui/use-toast";
-import { useSession } from "next-auth/react";
-import Pusher from "pusher-js";
-
-interface Notification {
-  id: string;
-  title: string;
-  message: string;
-  type: string;
-  read: boolean;
-  count: number;
-  createdAt: string;
-}
+import { useNotifications } from "@/lib/hooks/useNotifications";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function NotificationsList() {
-  const { data: session } = useSession();
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const { toast } = useToast();
+  const { notifications, isLoading, markAsRead, deleteNotification } =
+    useNotifications();
 
-  // Memoize fetchNotifications to prevent unnecessary re-renders
-  const fetchNotifications = useCallback(async () => {
-    try {
-      const response = await fetch("/api/notifications");
-      if (!response.ok) throw new Error("Failed to fetch notifications");
-      const data = await response.json();
-      setNotifications(data);
-    } catch (error) {
-      console.error("Failed to fetch notifications:", error);
-      // Don't show toast here to break the dependency cycle
-    }
-  }, []); // Remove toast dependency
-
-  // Memoize handlers to prevent unnecessary re-renders
-  const markAsRead = useCallback(async (id: string) => {
-    try {
-      await fetch(`/api/notifications/${id}/read`, {
-        method: "POST",
-      });
-      setNotifications((prev) =>
-        prev.map((n) => (n.id === id ? { ...n, read: true } : n))
-      );
-    } catch {
-      toast({
-        title: "Error",
-        description: "Failed to mark notification as read",
-      });
-    }
-  }, []);
-
-  const deleteNotification = useCallback(async (id: string) => {
-    try {
-      await fetch(`/api/notifications/${id}`, {
-        method: "DELETE",
-      });
-      setNotifications((prev) => prev.filter((n) => n.id !== id));
-    } catch {
-      toast({
-        title: "Error",
-        description: "Failed to delete notification",
-      });
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!session?.user?.id) return;
-
-    let mounted = true; // Add mounted flag to prevent updates after unmount
-
-    // Fetch existing notifications
-    fetchNotifications().catch(console.error);
-
-    // Track if we've already shown the notification permission toast
-    let hasShownPermissionToast = false;
-
-    // Request notification permission only once on mount
-    if ("Notification" in window && Notification.permission === "default") {
-      Notification.requestPermission().then((permission) => {
-        if (!mounted) return;
-        if (!hasShownPermissionToast) {
-          hasShownPermissionToast = true;
-          if (permission === "granted") {
-            toast({
-              title: "Notifications enabled",
-              description: "You will now receive desktop notifications",
-            });
-          } else if (permission === "denied") {
-            toast({
-              title: "Notifications disabled",
-              description:
-                "Please enable notifications in your browser settings to receive alerts",
-            });
-          }
-        }
-      });
-    }
-
-    // Initialize Pusher
-    const pusher = new Pusher(process.env.NEXT_PUBLIC_PUSHER_KEY!, {
-      cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER!,
-      forceTLS: true,
-      enabledTransports: ["ws", "wss"],
-    });
-
-    // Track connection state to prevent duplicate error toasts
-    let isConnected = false;
-    let hasShownErrorToast = false;
-
-    // Add connection state change logging
-    pusher.connection.bind(
-      "state_change",
-      (states: { current: string; previous: string }) => {
-        if (!mounted) return;
-        console.log(
-          "Pusher connection state changed from",
-          states.previous,
-          "to",
-          states.current
-        );
-
-        if (states.current === "connected") {
-          isConnected = true;
-          hasShownErrorToast = false;
-          // Only fetch if we were previously disconnected
-          if (
-            states.previous === "disconnected" ||
-            states.previous === "failed"
-          ) {
-            fetchNotifications().catch(console.error);
-          }
-        } else if (
-          states.current === "disconnected" ||
-          states.current === "failed"
-        ) {
-          isConnected = false;
-        }
-      }
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        {[...Array(3)].map((_, i) => (
+          <Card key={i} className="p-4">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex-1 space-y-2">
+                <Skeleton className="h-5 w-3/4" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-1/4 mt-2" />
+              </div>
+              <div className="flex gap-2">
+                <Skeleton className="h-9 w-9 rounded-md" />
+                <Skeleton className="h-9 w-9 rounded-md" />
+              </div>
+            </div>
+          </Card>
+        ))}
+      </div>
     );
-
-    // Add connection error handling
-    pusher.connection.bind("error", (err: any) => {
-      console.error("Pusher connection error:", err);
-      if (!hasShownErrorToast) {
-        hasShownErrorToast = true;
-        toast({
-          title: "Connection Error",
-          description:
-            "Having trouble receiving real-time updates. Please check your connection.",
-        });
-      }
-    });
-
-    // Subscribe to user's notification channel
-    const channel = pusher.subscribe(`user-${session.user.id}`);
-
-    // Add subscription success handler
-    channel.bind("pusher:subscription_succeeded", () => {
-      console.log(
-        "Successfully subscribed to notifications channel:",
-        `user-${session.user.id}`
-      );
-    });
-
-    // Listen for new notifications
-    channel.bind("new-notification", (notification: Notification) => {
-      console.log("Received new notification:", notification);
-      setNotifications((prev) => {
-        console.log("Previous notifications:", prev);
-        const updated = [notification, ...prev];
-        console.log("Updated notifications:", updated);
-        return updated;
-      });
-
-      // Show desktop notification if enabled
-      if (
-        "Notification" in window &&
-        Notification.permission === "granted" &&
-        document.visibilityState !== "visible"
-      ) {
-        new Notification(notification.title, {
-          body: notification.message,
-          icon: "/pushitt.png",
-        });
-      }
-
-      toast({
-        title: notification.title,
-        description: notification.message,
-      });
-    });
-
-    // Listen for notification updates
-    channel.bind("notification-updated", (notification: Notification) => {
-      setNotifications((prev) =>
-        prev.map((n) => (n.id === notification.id ? notification : n))
-      );
-
-      // Show desktop notification if enabled
-      if (
-        "Notification" in window &&
-        Notification.permission === "granted" &&
-        document.visibilityState !== "visible"
-      ) {
-        new Notification(notification.title, {
-          body: `${notification.message} (${notification.count} updates)`,
-          icon: "/pushitt.png",
-        });
-      }
-
-      toast({
-        title: notification.title,
-        description: `${notification.message} (${notification.count} updates)`,
-      });
-    });
-
-    return () => {
-      mounted = false;
-      channel.unbind_all();
-      channel.unsubscribe();
-      pusher.disconnect();
-    };
-  }, [session?.user?.id, fetchNotifications]); // fetchNotifications is now stable
+  }
 
   if (notifications.length === 0) {
     return (

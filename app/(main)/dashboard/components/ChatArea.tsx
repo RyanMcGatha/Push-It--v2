@@ -38,7 +38,7 @@ import {
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
 } from "@/components/ui/dropdown-menu";
-import { toast } from "react-hot-toast";
+import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
 
 interface Message {
@@ -111,7 +111,6 @@ export default function ChatArea({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const pusherRef = useRef<Pusher | null>(null);
 
-  console.log(isGroup);
   // Chat settings state
   const [chatSettings, setChatSettings] = useState<ChatSettings>(() => {
     // Try to load settings from localStorage

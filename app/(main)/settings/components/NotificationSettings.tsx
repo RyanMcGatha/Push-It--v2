@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Bell, Volume2 } from "lucide-react";
-import { useToast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 
 interface NotificationSettings {
   desktop: boolean;
@@ -25,7 +25,6 @@ const defaultSettings: NotificationSettings = {
 };
 
 export default function NotificationSettings() {
-  const { toast } = useToast();
   const [settings, setSettings] = useState<NotificationSettings>(() => {
     if (typeof window === "undefined") return defaultSettings;
     try {
@@ -45,14 +44,12 @@ export default function NotificationSettings() {
       Notification.requestPermission().then((permission) => {
         if (permission !== "granted") {
           setSettings((prev) => ({ ...prev, desktop: false }));
-          toast({
-            title: "Permission Denied",
+          toast.error("Permission Denied", {
             description:
               "Please enable notifications in your browser settings to receive alerts",
           });
         } else {
-          toast({
-            title: "Notifications Enabled",
+          toast.success("Notifications Enabled", {
             description: "You will now receive desktop notifications",
           });
         }
@@ -76,15 +73,13 @@ export default function NotificationSettings() {
       if (!settings.desktop && "Notification" in window) {
         const permission = await Notification.requestPermission();
         if (permission !== "granted") {
-          toast({
-            title: "Permission Denied",
+          toast.error("Permission Denied", {
             description:
               "Please enable notifications in your browser settings to receive alerts",
           });
           return; // Don't update settings if permission was denied
         }
-        toast({
-          title: "Notifications Enabled",
+        toast.success("Notifications Enabled", {
           description: "You will now receive desktop notifications",
         });
       }

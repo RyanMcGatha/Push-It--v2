@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/app/utils/theme-provider";
-import { Toaster } from "react-hot-toast";
+import { Toaster } from "sonner";
 import { NextAuthProvider } from "@/app/utils/next-auth-provider";
-import { ToastProvider } from "@/components/ui/toast";
+import { NotificationProvider } from "@/app/components/NotificationProvider";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -23,21 +23,12 @@ export default function RootLayout({
       <body className={inter.className}>
         <NextAuthProvider>
           <ThemeProvider>
-            <Toaster
-              position="top-center"
-              toastOptions={{
-                style: {
-                  zIndex: 9999,
-                  background: "hsl(var(--background))",
-                  color: "hsl(var(--foreground))",
-                  border: "1px solid hsl(var(--border))",
-                },
-              }}
-            />
-            {children}
+            <NotificationProvider>
+              <Toaster />
+              {children}
+            </NotificationProvider>
           </ThemeProvider>
         </NextAuthProvider>
-        <ToastProvider />
       </body>
     </html>
   );

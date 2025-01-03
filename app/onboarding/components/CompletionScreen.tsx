@@ -48,7 +48,7 @@ export function CompletionScreen() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto text-center">
+    <div className="w-full max-w-6xl mx-auto px-4">
       <motion.div
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
@@ -56,7 +56,7 @@ export function CompletionScreen() {
           duration: 0.5,
           ease: "easeOut",
         }}
-        className="space-y-8"
+        className="space-y-8 text-center"
       >
         {/* Success Animation */}
         <div className="relative w-32 h-32 mx-auto">

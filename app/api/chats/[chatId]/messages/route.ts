@@ -127,8 +127,8 @@ export async function POST(
 
     // Create notifications for each participant
     await Promise.all(
-      participants.map((participant) =>
-        prisma.notification.create({
+      participants.map(async (participant) => {
+        const notification = await prisma.notification.create({
           data: {
             userId: participant.userId,
             title: "New Message",
@@ -139,8 +139,17 @@ export async function POST(
             }`,
             type: "message",
           },
-        })
-      )
+        });
+
+        // Trigger notification event for each recipient
+        await pusher.trigger(
+          `user-${participant.userId}-notifications`,
+          "new-notification",
+          notification
+        );
+
+        return notification;
+      })
     );
 
     // Trigger the new message event on Pusher

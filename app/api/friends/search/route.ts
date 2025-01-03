@@ -171,20 +171,42 @@ export async function GET(req: Request) {
             AND: [
               {
                 NOT: {
-                  receivedFriendRequests: {
-                    some: {
-                      senderId: session.user.id,
+                  OR: [
+                    {
+                      // Exclude accepted friends
+                      receivedFriendRequests: {
+                        some: {
+                          senderId: session.user.id,
+                          status: "accepted",
+                        },
+                      },
                     },
-                  },
-                },
-              },
-              {
-                NOT: {
-                  sentFriendRequests: {
-                    some: {
-                      receiverId: session.user.id,
+                    {
+                      sentFriendRequests: {
+                        some: {
+                          receiverId: session.user.id,
+                          status: "accepted",
+                        },
+                      },
                     },
-                  },
+                    {
+                      // Exclude pending requests
+                      receivedFriendRequests: {
+                        some: {
+                          senderId: session.user.id,
+                          status: "pending",
+                        },
+                      },
+                    },
+                    {
+                      sentFriendRequests: {
+                        some: {
+                          receiverId: session.user.id,
+                          status: "pending",
+                        },
+                      },
+                    },
+                  ],
                 },
               },
             ],

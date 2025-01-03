@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Search, Users, Plus } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSession } from "next-auth/react";
 import LogoutButton from "./logout-button";
 import CreateChatModal from "./CreateChatModal";
-import Pusher from "pusher-js";
-import { toast } from "react-hot-toast";
+import { useNotifications } from "@/lib/hooks/useNotifications";
+import { toast } from "sonner";
 
 interface User {
   id: string;
@@ -38,14 +38,6 @@ interface ChatSidebarProps {
   onSelectChat: (chat: Chat | null) => void;
 }
 
-interface ChatDeletionData {
-  chatId: string;
-}
-
-interface ParticipantLeftData {
-  userId: string;
-}
-
 export default function ChatSidebar({
   selectedChatId,
   onSelectChat,
@@ -55,96 +47,66 @@ export default function ChatSidebar({
   const [searchQuery, setSearchQuery] = useState("");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
-  // Fetch chats on mount
-  useEffect(() => {
-    fetchChats();
+  const handleNewMessage = useCallback((chatId: string, message: any) => {
+    setChats((prev) =>
+      prev.map((c) => {
+        if (c.id === chatId) {
+          return {
+            ...c,
+            messages: [message, ...(c.messages || [])],
+          };
+        }
+        return c;
+      })
+    );
   }, []);
 
-  // Connect to Pusher
-  useEffect(() => {
-    if (!session?.user?.id) return;
-
-    const pusher = new Pusher(process.env.NEXT_PUBLIC_PUSHER_KEY!, {
-      cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER!,
-    });
-
-    // Subscribe to global chats channel
-    const channel = pusher.subscribe("chats");
-
-    // Listen for new chats
-    channel.bind("new-chat", (chat: Chat) => {
-      setChats((prev) => [chat, ...prev]);
-    });
-
-    // Listen for chat deletions
-    channel.bind("chat-deleted", (data: ChatDeletionData) => {
-      setChats((prev) => prev.filter((chat) => chat.id !== data.chatId));
-      if (selectedChatId === data.chatId) {
-        onSelectChat(null);
+  const handleChatUpdated = useCallback(
+    (chat: any) => {
+      if (chat.deleted) {
+        setChats((prev) => prev.filter((c) => c.id !== chat.chatId));
+        if (selectedChatId === chat.chatId) {
+          onSelectChat(null);
+        }
+      } else {
+        setChats((prev) => [chat, ...prev]);
       }
-    });
+    },
+    [selectedChatId, onSelectChat]
+  );
 
-    // Subscribe to individual chat channels
-    chats.forEach((chat) => {
-      const chatChannel = pusher.subscribe(`chat-${chat.id}`);
+  const { subscribeToChatChannel } = useNotifications({
+    onNewMessage: handleNewMessage,
+    onChatUpdated: handleChatUpdated,
+  });
 
-      // Listen for new messages
-      chatChannel.bind("new-message", (message: Message) => {
-        setChats((prev) =>
-          prev.map((c) => {
-            if (c.id === chat.id) {
-              return {
-                ...c,
-                messages: [message, ...(c.messages || [])],
-              };
-            }
-            return c;
-          })
-        );
-      });
+  // Fetch chats on mount
+  useEffect(() => {
+    let isMounted = true;
 
-      // Listen for participant leave events
-      chatChannel.bind("participant-left", (data: ParticipantLeftData) => {
-        setChats((prev) =>
-          prev.map((c) => {
-            if (c.id === chat.id) {
-              return {
-                ...c,
-                participants: c.participants.filter(
-                  (p) => p.user.id !== data.userId
-                ),
-              };
-            }
-            return c;
-          })
-        );
-      });
-    });
+    const fetchChats = async () => {
+      try {
+        const response = await fetch("/api/chats");
+        if (!response.ok) throw new Error("Failed to fetch chats");
+        const data = await response.json();
+        if (isMounted) {
+          setChats(data);
+          // Subscribe to each chat channel
+          data.forEach((chat: Chat) => {
+            subscribeToChatChannel(chat.id);
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching chats:", error);
+      }
+    };
+
+    fetchChats();
 
     return () => {
-      // Unsubscribe from global channel
-      channel.unbind_all();
-      channel.unsubscribe();
-
-      // Unsubscribe from individual chat channels
-      chats.forEach((chat) => {
-        pusher.unsubscribe(`chat-${chat.id}`);
-      });
-
-      pusher.disconnect();
+      isMounted = false;
     };
-  }, [session?.user?.id, chats, selectedChatId, onSelectChat]);
-
-  const fetchChats = async () => {
-    try {
-      const response = await fetch("/api/chats");
-      if (!response.ok) throw new Error("Failed to fetch chats");
-      const data = await response.json();
-      setChats(data);
-    } catch (error) {
-      console.error("Error fetching chats:", error);
-    }
-  };
+  }, [subscribeToChatChannel]);
 
   const handleCreateChat = async (
     name: string | null,
@@ -178,31 +140,34 @@ export default function ChatSidebar({
     }
   };
 
-  const getChatDisplayName = (chat: Chat) => {
-    if (chat.name) return chat.name;
+  const getChatDisplayName = useCallback(
+    (chat: Chat) => {
+      if (chat.name) return chat.name;
 
-    const otherParticipants = chat.participants
-      .filter((p) => p.user.id !== session?.user?.id)
-      .map((p) => p.user.name || "Anonymous")
-      .join(", ");
+      const otherParticipants = chat.participants
+        .filter((p) => p.user.id !== session?.user?.id)
+        .map((p) => p.user.name || "Anonymous")
+        .join(", ");
 
-    return otherParticipants || "New Chat";
-  };
+      return otherParticipants || "New Chat";
+    },
+    [session?.user?.id]
+  );
 
-  const getLastMessage = (chat: Chat) => {
+  const getLastMessage = useCallback((chat: Chat) => {
     if (!chat.messages || chat.messages.length === 0) return "No messages yet";
     const lastMessage = chat.messages[0];
     return lastMessage.content;
-  };
+  }, []);
 
-  const getLastMessageTime = (chat: Chat) => {
+  const getLastMessageTime = useCallback((chat: Chat) => {
     if (!chat.messages || chat.messages.length === 0) return "";
     const lastMessage = chat.messages[0];
     return new Date(lastMessage.createdAt).toLocaleTimeString([], {
       hour: "2-digit",
       minute: "2-digit",
     });
-  };
+  }, []);
 
   const filteredChats = chats.filter((chat) =>
     getChatDisplayName(chat).toLowerCase().includes(searchQuery.toLowerCase())
@@ -304,12 +269,13 @@ export default function ChatSidebar({
           </div>
         </motion.div>
       </div>
-
-      <CreateChatModal
-        isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
-        onCreateChat={handleCreateChat}
-      />
+      {isCreateModalOpen && (
+        <CreateChatModal
+          isOpen={isCreateModalOpen}
+          onClose={() => setIsCreateModalOpen(false)}
+          onCreateChat={handleCreateChat}
+        />
+      )}
     </>
   );
 }

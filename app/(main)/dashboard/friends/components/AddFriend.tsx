@@ -6,7 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { useDebounce } from "@/lib/hooks/use-debounce";
+import { useDebounce } from "@/app/utils/hooks/use-debounce";
 
 interface UserWithProfile extends User {
   profile: {

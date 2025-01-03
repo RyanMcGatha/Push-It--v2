@@ -3,9 +3,13 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/auth.config";
 import { prisma } from "@/lib/prisma";
 import { pusher } from "@/lib/pusher";
+import { headers } from "next/headers";
 
-export async function GET() {
+export const runtime = "edge"; // Use edge runtime for better performance
+
+export async function GET(request: Request) {
   try {
+    const headersList = headers();
     const session = await getServerSession(authOptions);
     console.log("Session state:", {
       exists: !!session,
@@ -35,10 +39,19 @@ export async function GET() {
       },
     });
 
-    return NextResponse.json(notifications);
+    // Add cache control headers
+    return new NextResponse(JSON.stringify(notifications), {
+      headers: {
+        "Content-Type": "application/json",
+        "Cache-Control": "public, s-maxage=30, stale-while-revalidate=59",
+      },
+    });
   } catch (error) {
     console.error("[NOTIFICATIONS_GET]", error);
-    return new NextResponse("Internal Error", { status: 500 });
+    return new NextResponse(
+      JSON.stringify({ error: "Failed to fetch notifications" }),
+      { status: 500 }
+    );
   }
 }
 
@@ -96,7 +109,7 @@ export async function POST(req: Request) {
         updatedNotification
       );
       await pusher.trigger(
-        `user-${user.id}`,
+        `user-${user.id}-notifications`,
         "notification-updated",
         updatedNotification
       );
@@ -104,24 +117,27 @@ export async function POST(req: Request) {
       return NextResponse.json(updatedNotification);
     }
 
-    // Create new notification if no recent similar ones exist
     const notification = await prisma.notification.create({
       data: {
+        userId: user.id,
+        type,
         title,
         message,
-        type,
-        userId: user.id,
         count: 1,
       },
     });
 
-    // Trigger real-time notification update
+    // Trigger real-time notification
     console.log(
       "Triggering new-notification event for user:",
       user.id,
       notification
     );
-    await pusher.trigger(`user-${user.id}`, "new-notification", notification);
+    await pusher.trigger(
+      `user-${user.id}-notifications`,
+      "new-notification",
+      notification
+    );
 
     return NextResponse.json(notification);
   } catch (error) {

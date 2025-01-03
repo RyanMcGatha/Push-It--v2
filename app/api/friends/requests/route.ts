@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]/auth.config";
 import { prisma } from "@/lib/prisma";
+import { pusher } from "@/lib/pusher";
 
 export async function POST(req: Request) {
   try {
@@ -24,18 +25,47 @@ export async function POST(req: Request) {
           {
             senderId: session.user.id,
             receiverId: receiverId,
+            status: {
+              in: ["pending", "accepted"],
+            },
           },
           {
             senderId: receiverId,
             receiverId: session.user.id,
+            status: {
+              in: ["pending", "accepted"],
+            },
           },
         ],
       },
     });
 
     if (existingRequest) {
-      return new NextResponse("Friend request already exists", { status: 400 });
+      return new NextResponse(
+        "A pending or accepted friend request already exists",
+        {
+          status: 400,
+        }
+      );
     }
+
+    // Delete any existing rejected requests between these users
+    await prisma.friendship.deleteMany({
+      where: {
+        OR: [
+          {
+            senderId: session.user.id,
+            receiverId: receiverId,
+            status: "rejected",
+          },
+          {
+            senderId: receiverId,
+            receiverId: session.user.id,
+            status: "rejected",
+          },
+        ],
+      },
+    });
 
     // Create friend request
     const friendRequest = await prisma.friendship.create({
@@ -45,6 +75,15 @@ export async function POST(req: Request) {
         status: "pending",
       },
       include: {
+        sender: {
+          include: {
+            profile: {
+              select: {
+                displayName: true,
+              },
+            },
+          },
+        },
         receiver: {
           include: {
             profile: {
@@ -58,7 +97,7 @@ export async function POST(req: Request) {
     });
 
     // Create notification for the receiver
-    await prisma.notification.create({
+    const notification = await prisma.notification.create({
       data: {
         userId: receiverId,
         title: "New Friend Request",
@@ -68,6 +107,25 @@ export async function POST(req: Request) {
         type: "friend_request",
       },
     });
+
+    // Trigger real-time updates for both users
+    await pusher.trigger(
+      `user-${session.user.id}`,
+      "friend-request-sent",
+      friendRequest
+    );
+    await pusher.trigger(
+      `user-${receiverId}`,
+      "friend-request-received",
+      friendRequest
+    );
+
+    // Trigger real-time notification
+    await pusher.trigger(
+      `user-${receiverId}-notifications`,
+      "new-notification",
+      notification
+    );
 
     return NextResponse.json(friendRequest);
   } catch (error) {

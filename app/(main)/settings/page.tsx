@@ -1,6 +1,7 @@
 "use client";
 
 import NotificationSettings from "./components/NotificationSettings";
+import OnboardingSection from "./components/OnboardingSection";
 
 export default function SettingsPage() {
   return (
@@ -14,8 +15,8 @@ export default function SettingsPage() {
         </div>
 
         <div className="space-y-8">
+          <OnboardingSection />
           <NotificationSettings />
-          {/* Add other settings sections here */}
         </div>
       </div>
     </div>

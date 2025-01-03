@@ -4,7 +4,6 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import ChatSidebar from "./components/ChatSidebar";
 import ChatArea from "./components/ChatArea";
-import { useSession } from "next-auth/react";
 
 interface User {
   id: string;
@@ -32,8 +31,7 @@ interface Chat {
 
 export default function DashboardPage() {
   const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
-  const session = useSession();
-  console.log(session);
+
   const handleSelectChat = (chat: Chat | null) => {
     setSelectedChat(chat);
   };

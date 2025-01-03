@@ -1,5 +1,5 @@
 import { ThemeProvider } from "@/app/utils/theme-provider";
-import { Toaster } from "react-hot-toast";
+
 import { Nav } from "@/components/ui/nav";
 
 export default function AuthLayout({
@@ -10,18 +10,7 @@ export default function AuthLayout({
   return (
     <ThemeProvider>
       <Nav />
-      <div className="flex h-screen p-8 flex-col items-center justify-center bg-background bg-texture">
-        <Toaster
-          position="top-center"
-          toastOptions={{
-            style: {
-              zIndex: 9999,
-              background: "hsl(var(--background))",
-              color: "hsl(var(--foreground))",
-              border: "1px solid hsl(var(--border))",
-            },
-          }}
-        />
+      <div className="flex min-h-screen flex-col items-center justify-center bg-background bg-texture pt-12 px-2 xs:p-8">
         {children}
       </div>
     </ThemeProvider>

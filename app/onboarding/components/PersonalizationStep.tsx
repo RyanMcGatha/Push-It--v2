@@ -6,6 +6,15 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { X } from "lucide-react";
 
 interface PersonalizationStepProps {
   onNext: () => void;
@@ -18,31 +27,35 @@ const themes = [
     name: "Light",
     color: "hsl(var(--background))",
     textColor: "hsl(var(--foreground))",
+    icon: "☀️",
   },
   {
     id: "dark",
     name: "Dark",
     color: "hsl(var(--background))",
     textColor: "hsl(var(--foreground))",
+    icon: "🌙",
   },
   {
     id: "green",
     name: "Green",
     color: "hsl(var(--primary))",
     textColor: "hsl(var(--primary-foreground))",
+    icon: "🌿",
   },
   {
     id: "forest",
     name: "Forest",
     color: "hsl(var(--secondary))",
     textColor: "hsl(var(--secondary-foreground))",
+    icon: "🌲",
   },
 ];
 
 const layouts = [
-  { id: "modern", name: "Modern" },
-  { id: "classic", name: "Classic" },
-  { id: "minimal", name: "Minimal" },
+  { id: "modern", name: "Modern", icon: "✨" },
+  { id: "classic", name: "Classic", icon: "📚" },
+  { id: "minimal", name: "Minimal", icon: "🎯" },
 ];
 
 export function PersonalizationStep({
@@ -53,22 +66,11 @@ export function PersonalizationStep({
     displayName: "",
     bio: "",
     location: "",
-    website: "",
-    twitterHandle: "",
-    githubHandle: "",
-    company: "",
-    jobTitle: "",
-    phoneNumber: "",
-    customUrl: "",
     themeColor: "",
     bannerImage: "",
     layout: "modern",
-    skills: [] as string[],
-    achievements: [] as string[],
   });
 
-  const [currentSkill, setCurrentSkill] = useState("");
-  const [currentAchievement, setCurrentAchievement] = useState("");
   const [selectedTheme, setSelectedTheme] = useState("light");
 
   const handleInputChange = (
@@ -76,26 +78,6 @@ export function PersonalizationStep({
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleSkillAdd = () => {
-    if (currentSkill.trim()) {
-      setFormData((prev) => ({
-        ...prev,
-        skills: [...prev.skills, currentSkill.trim()],
-      }));
-      setCurrentSkill("");
-    }
-  };
-
-  const handleAchievementAdd = () => {
-    if (currentAchievement.trim()) {
-      setFormData((prev) => ({
-        ...prev,
-        achievements: [...prev.achievements, currentAchievement.trim()],
-      }));
-      setCurrentAchievement("");
-    }
   };
 
   const handleSubmit = async () => {
@@ -118,266 +100,204 @@ export function PersonalizationStep({
   };
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="w-full  mx-auto px-4 py-6">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="space-y-6"
+        transition={{ duration: 0.4 }}
+        className="space-y-8"
       >
-        <div>
-          <h2 className="text-2xl font-bold text-foreground mb-4">
+        <div className="text-center space-y-3 max-w-3xl mx-auto">
+          <motion.h2
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/60"
+          >
             Personalize Your Profile
-          </h2>
-          <p className="text-muted-foreground mb-6">
-            Let's make your profile unique and help others get to know you
-            better.
-          </p>
+          </motion.h2>
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.3 }}
+            className="text-muted-foreground text-lg leading-relaxed"
+          >
+            Make your profile uniquely yours with custom themes and personal
+            details
+          </motion.p>
         </div>
 
-        {/* Basic Information */}
-        <div className="space-y-4">
-          <div>
-            <Label htmlFor="displayName">Display Name</Label>
-            <Input
-              id="displayName"
-              name="displayName"
-              value={formData.displayName}
-              onChange={handleInputChange}
-              placeholder="How should we call you?"
-            />
-          </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+          {/* Left Column - Basic Info */}
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.4 }}
+            className="lg:col-span-1"
+          >
+            <Card className="shadow-lg border-2">
+              <CardHeader className="space-y-2 pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="h-8 w-1 bg-primary rounded-full" />
+                  <div>
+                    <CardTitle className="text-2xl">
+                      Basic Information
+                    </CardTitle>
+                    <CardDescription className="text-base">
+                      Tell us about yourself
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid gap-6 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label
+                      htmlFor="displayName"
+                      className="text-sm font-medium"
+                    >
+                      Display Name
+                    </Label>
+                    <Input
+                      id="displayName"
+                      name="displayName"
+                      value={formData.displayName}
+                      onChange={handleInputChange}
+                      placeholder="How should we call you?"
+                      className="h-11 transition-all border-2 focus:ring-2 focus:ring-primary/20"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="location" className="text-sm font-medium">
+                      Location
+                    </Label>
+                    <Input
+                      id="location"
+                      name="location"
+                      value={formData.location}
+                      onChange={handleInputChange}
+                      placeholder="Where are you based?"
+                      className="h-11 transition-all border-2 focus:ring-2 focus:ring-primary/20"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="bio" className="text-sm font-medium">
+                    Bio
+                  </Label>
+                  <Textarea
+                    id="bio"
+                    name="bio"
+                    value={formData.bio}
+                    onChange={handleInputChange}
+                    placeholder="Tell us about yourself"
+                    rows={4}
+                    className="resize-none transition-all border-2 focus:ring-2 focus:ring-primary/20"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
 
-          <div>
-            <Label htmlFor="bio">Bio</Label>
-            <Textarea
-              id="bio"
-              name="bio"
-              value={formData.bio}
-              onChange={handleInputChange}
-              placeholder="Tell us about yourself"
-              rows={3}
-            />
-          </div>
+          {/* Right Column - Appearance */}
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.5 }}
+            className="lg:col-span-1 "
+          >
+            <Card className="shadow-lg border-2 sticky top-8 ">
+              <CardHeader className="space-y-2 pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="h-8 w-1 bg-primary rounded-full" />
+                  <div>
+                    <CardTitle className="text-2xl">Appearance</CardTitle>
+                    <CardDescription className="text-base">
+                      Choose your preferred theme and layout
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-3">
+                  <Label>Theme</Label>
+                  <div className="grid grid-cols-2 gap-3">
+                    {themes.map((theme) => (
+                      <motion.button
+                        key={theme.id}
+                        onClick={() => setSelectedTheme(theme.id)}
+                        className={`p-4 rounded-lg border-2 transition-all duration-200 flex flex-col items-center gap-2 ${
+                          selectedTheme === theme.id
+                            ? "border-primary ring-2 ring-primary/20"
+                            : "border-border hover:border-muted-foreground"
+                        }`}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        style={{
+                          backgroundColor: theme.color,
+                          color: theme.textColor,
+                        }}
+                      >
+                        <span className="text-3xl">{theme.icon}</span>
+                        <span className="font-medium">{theme.name}</span>
+                      </motion.button>
+                    ))}
+                  </div>
+                </div>
 
-          <div>
-            <Label htmlFor="location">Location</Label>
-            <Input
-              id="location"
-              name="location"
-              value={formData.location}
-              onChange={handleInputChange}
-              placeholder="Where are you based?"
-            />
-          </div>
-        </div>
-
-        {/* Professional Information */}
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold">Professional Details</h3>
-
-          <div>
-            <Label htmlFor="company">Company</Label>
-            <Input
-              id="company"
-              name="company"
-              value={formData.company}
-              onChange={handleInputChange}
-              placeholder="Where do you work?"
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="jobTitle">Job Title</Label>
-            <Input
-              id="jobTitle"
-              name="jobTitle"
-              value={formData.jobTitle}
-              onChange={handleInputChange}
-              placeholder="What's your role?"
-            />
-          </div>
-        </div>
-
-        {/* Social Links */}
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold">Social Links</h3>
-
-          <div>
-            <Label htmlFor="website">Website</Label>
-            <Input
-              id="website"
-              name="website"
-              value={formData.website}
-              onChange={handleInputChange}
-              placeholder="Your personal website"
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="twitterHandle">Twitter Handle</Label>
-            <Input
-              id="twitterHandle"
-              name="twitterHandle"
-              value={formData.twitterHandle}
-              onChange={handleInputChange}
-              placeholder="@username"
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="githubHandle">GitHub Handle</Label>
-            <Input
-              id="githubHandle"
-              name="githubHandle"
-              value={formData.githubHandle}
-              onChange={handleInputChange}
-              placeholder="Your GitHub username"
-            />
-          </div>
-        </div>
-
-        {/* Contact Information */}
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold">Contact Information</h3>
-
-          <div>
-            <Label htmlFor="phoneNumber">Phone Number</Label>
-            <Input
-              id="phoneNumber"
-              name="phoneNumber"
-              value={formData.phoneNumber}
-              onChange={handleInputChange}
-              placeholder="Your phone number"
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="customUrl">Custom URL</Label>
-            <Input
-              id="customUrl"
-              name="customUrl"
-              value={formData.customUrl}
-              onChange={handleInputChange}
-              placeholder="Your custom profile URL"
-            />
-          </div>
-        </div>
-
-        {/* Skills and Achievements */}
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold">Skills & Achievements</h3>
-
-          <div>
-            <Label htmlFor="skills">Skills</Label>
-            <div className="flex gap-2 mb-2">
-              <Input
-                id="skills"
-                value={currentSkill}
-                onChange={(e) => setCurrentSkill(e.target.value)}
-                placeholder="Add a skill"
-              />
-              <Button type="button" onClick={handleSkillAdd}>
-                Add
-              </Button>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {formData.skills.map((skill, index) => (
-                <span
-                  key={index}
-                  className="px-2 py-1 bg-secondary text-secondary-foreground rounded-md"
-                >
-                  {skill}
-                </span>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <Label htmlFor="achievements">Achievements</Label>
-            <div className="flex gap-2 mb-2">
-              <Input
-                id="achievements"
-                value={currentAchievement}
-                onChange={(e) => setCurrentAchievement(e.target.value)}
-                placeholder="Add an achievement"
-              />
-              <Button type="button" onClick={handleAchievementAdd}>
-                Add
-              </Button>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {formData.achievements.map((achievement, index) => (
-                <span
-                  key={index}
-                  className="px-2 py-1 bg-secondary text-secondary-foreground rounded-md"
-                >
-                  {achievement}
-                </span>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Theme Selection */}
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold">Appearance</h3>
-
-          <div>
-            <Label>Theme</Label>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-2">
-              {themes.map((theme) => (
-                <motion.button
-                  key={theme.id}
-                  onClick={() => setSelectedTheme(theme.id)}
-                  className={`p-4 rounded-lg border-2 transition-all duration-200 ${
-                    selectedTheme === theme.id
-                      ? "border-primary ring-2 ring-primary/20"
-                      : "border-border hover:border-muted-foreground"
-                  }`}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  style={{
-                    backgroundColor: theme.color,
-                    color: theme.textColor,
-                  }}
-                >
-                  {theme.name}
-                </motion.button>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <Label htmlFor="layout">Layout Style</Label>
-            <div className="grid grid-cols-3 gap-4 mt-2">
-              {layouts.map((layout) => (
-                <motion.button
-                  key={layout.id}
-                  onClick={() =>
-                    setFormData((prev) => ({ ...prev, layout: layout.id }))
-                  }
-                  className={`p-4 rounded-lg border-2 transition-all duration-200 ${
-                    formData.layout === layout.id
-                      ? "border-primary ring-2 ring-primary/20"
-                      : "border-border hover:border-muted-foreground"
-                  }`}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  {layout.name}
-                </motion.button>
-              ))}
-            </div>
-          </div>
+                <div className="space-y-3">
+                  <Label>Layout Style</Label>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    {layouts.map((layout) => (
+                      <motion.button
+                        key={layout.id}
+                        onClick={() =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            layout: layout.id,
+                          }))
+                        }
+                        className={`p-4 rounded-lg border-2 transition-all duration-200 flex flex-col items-center gap-2 ${
+                          formData.layout === layout.id
+                            ? "border-primary ring-2 ring-primary/20"
+                            : "border-border hover:border-muted-foreground"
+                        }`}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        <span className="text-3xl">{layout.icon}</span>
+                        <span className="font-medium">{layout.name}</span>
+                      </motion.button>
+                    ))}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
         </div>
 
         {/* Action Buttons */}
-        <div className="flex justify-between pt-6">
-          <Button variant="ghost" onClick={onSkip}>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.6 }}
+          className="flex justify-between items-center max-w-4xl mx-auto pt-12"
+        >
+          <Button
+            variant="outline"
+            onClick={onSkip}
+            className="w-[160px] h-11 text-base hover:bg-secondary/20"
+          >
             Skip for now
           </Button>
-          <Button onClick={handleSubmit}>Save & Continue</Button>
-        </div>
+          <Button
+            onClick={handleSubmit}
+            size="lg"
+            className="w-[160px] h-11 text-base shadow-md hover:shadow-lg transition-all"
+          >
+            Continue
+          </Button>
+        </motion.div>
       </motion.div>
     </div>
   );

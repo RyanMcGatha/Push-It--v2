@@ -6,6 +6,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useSession } from "next-auth/react";
+import Pusher from "pusher-js";
 
 interface FriendRequest {
   id: string;
@@ -24,6 +26,7 @@ interface FriendRequest {
 }
 
 export default function FriendRequests() {
+  const { data: session } = useSession();
   const [incomingRequests, setIncomingRequests] = useState<FriendRequest[]>([]);
   const [outgoingRequests, setOutgoingRequests] = useState<FriendRequest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -50,6 +53,44 @@ export default function FriendRequests() {
 
     fetchRequests();
   }, []);
+
+  // Add Pusher subscription for real-time updates
+  useEffect(() => {
+    if (!session?.user?.id) return;
+
+    const pusher = new Pusher(process.env.NEXT_PUBLIC_PUSHER_KEY!, {
+      cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER!,
+    });
+
+    const channel = pusher.subscribe(`user-${session.user.id}`);
+
+    // When we receive a friend request
+    channel.bind("friend-request-received", (request: FriendRequest) => {
+      setIncomingRequests((prev) => [...prev, request]);
+    });
+
+    // When we send a friend request
+    channel.bind("friend-request-sent", (request: FriendRequest) => {
+      setOutgoingRequests((prev) => [...prev, request]);
+    });
+
+    // When a friendship is updated (accepted/rejected)
+    channel.bind("friendship-updated", (request: FriendRequest) => {
+      // Remove the request from either incoming or outgoing lists
+      setIncomingRequests((prev) =>
+        prev.filter((req) => req.id !== request.id)
+      );
+      setOutgoingRequests((prev) =>
+        prev.filter((req) => req.id !== request.id)
+      );
+    });
+
+    return () => {
+      channel.unbind_all();
+      channel.unsubscribe();
+      pusher.disconnect();
+    };
+  }, [session?.user?.id]);
 
   const handleAcceptRequest = async (requestId: string) => {
     try {
