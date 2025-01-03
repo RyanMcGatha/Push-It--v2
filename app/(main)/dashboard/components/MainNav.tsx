@@ -133,7 +133,7 @@ export default function MainNav() {
             className="group relative flex items-center"
             onMouseEnter={item.onHover}
           >
-            <Link href={item.href} className="p-2 block">
+            <Link href={item.href} className="p-2 block" prefetch={true}>
               <motion.div
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.95 }}

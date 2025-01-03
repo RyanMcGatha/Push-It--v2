@@ -32,9 +32,10 @@ export function useNotifications(props?: UseNotificationsProps) {
     {
       revalidateOnFocus: false,
       dedupingInterval: 60000, // Increase deduping interval to 1 minute
-      suspense: true, // Enable suspense mode
-      revalidateOnMount: false, // Don't revalidate on mount if we have data
+      suspense: false, // Disable suspense mode since we're handling loading state manually
+      revalidateOnMount: true, // Always revalidate on mount to ensure fresh data
       keepPreviousData: true, // Keep showing previous data while loading new data
+      fallbackData: [], // Provide empty array as fallback
     }
   );
 

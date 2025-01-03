@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { pusher } from "@/lib/pusher";
 import { headers } from "next/headers";
 
-export const runtime = "edge"; // Use edge runtime for better performance
+export const runtime = "nodejs"; // Use Node.js runtime for bcrypt compatibility
 
 export async function GET(request: Request) {
   try {

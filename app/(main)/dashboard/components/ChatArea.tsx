@@ -40,12 +40,15 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
+import dynamic from "next/dynamic";
+import { Virtuoso } from "react-virtuoso";
 
 interface Message {
   id: string;
   content: string;
   createdAt: string;
   chatId: string;
+  status?: "sent" | "delivered" | "read";
   user: {
     id: string;
     name: string | null;
@@ -96,6 +99,17 @@ interface ChatDeletionData {
     userName: string;
   };
 }
+
+// Dynamically import heavy components
+const EmojiPicker = dynamic(() => import("@/app/components/EmojiPicker"), {
+  loading: () => null,
+  ssr: false,
+});
+
+const ImageUploader = dynamic(() => import("@/app/components/ImageUploader"), {
+  loading: () => null,
+  ssr: false,
+});
 
 export default function ChatArea({
   selectedChatId,
@@ -190,17 +204,49 @@ export default function ChatArea({
     });
   };
 
+  // Add new loading state
+  const [isLoading, setIsLoading] = useState(true);
+  const [showScrollButton, setShowScrollButton] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [showImageUploader, setShowImageUploader] = useState(false);
+
+  // Add scroll handler
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
+    setShowScrollButton(scrollHeight - scrollTop - clientHeight > 100);
+
+    // Mark messages as read when scrolled into view
+    if (scrollHeight - scrollTop - clientHeight < 100) {
+      setUnreadCount(0);
+    }
+  };
+
+  // Group messages by date
+  const groupMessagesByDate = (messages: Message[]) => {
+    return messages.reduce((groups: { [key: string]: Message[] }, message) => {
+      const date = new Date(message.createdAt).toLocaleDateString();
+      if (!groups[date]) {
+        groups[date] = [];
+      }
+      groups[date].push(message);
+      return groups;
+    }, {});
+  };
+
   // 1. Fetch existing messages when chat is selected
   useEffect(() => {
     if (!selectedChatId) return;
 
     (async () => {
+      setIsLoading(true);
       try {
         const response = await fetch(`/api/chats/${selectedChatId}/messages`);
         if (!response.ok) throw new Error("Failed to fetch messages");
         const data = await response.json();
         const adapted = data.map((msg: MessageData) => ({
           ...msg,
+          status: "read",
           user: {
             id: msg.userId,
             name: "Unknown",
@@ -211,6 +257,9 @@ export default function ChatArea({
         scrollToBottom();
       } catch (error) {
         console.error("Error fetching messages:", error);
+        toast.error("Failed to load messages");
+      } finally {
+        setIsLoading(false);
       }
     })();
   }, [selectedChatId]);
@@ -376,17 +425,44 @@ export default function ChatArea({
     }
   };
 
+  // Add image handling
+  const handleImageSelect = async (file: File) => {
+    // Here you would typically upload the image to your server/storage
+    // and get back a URL to send in the chat
+    try {
+      const formData = new FormData();
+      formData.append("image", file);
+
+      // Example upload endpoint - replace with your actual endpoint
+      const response = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) throw new Error("Failed to upload image");
+
+      const { url } = await response.json();
+      // Send image URL as a message
+      // You might want to create a special message type for images
+      setMessage(`[Image] ${url}`);
+      setShowImageUploader(false);
+    } catch (error) {
+      console.error("Error uploading image:", error);
+      toast.error("Failed to upload image");
+    }
+  };
+
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col h-full w-full overflow-hidden">
       <motion.div
         initial={{ y: -20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        className="flex flex-col h-full bg-background bg-texture"
+        className="flex flex-col h-full w-full bg-background bg-texture"
       >
         {selectedChatId ? (
           <>
             {/* Header */}
-            <div className="px-6 py-4 border-b border-border/50 flex items-center justify-between ">
+            <div className="flex-shrink-0 px-6 py-4 border-b border-border/50 flex items-center justify-between">
               <div className="flex items-center space-x-4">
                 <div className="relative">
                   <div className="h-12 w-12 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 ring-2 ring-background overflow-hidden flex items-center justify-center">
@@ -587,122 +663,247 @@ export default function ChatArea({
               </div>
             </div>
 
-            {/* Chat messages */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-6 messages-container">
-              <AnimatePresence>
-                {messages.map((msg) => (
-                  <motion.div
-                    key={msg.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className={`flex items-start ${
-                      msg.user.id === session?.user?.id
-                        ? "justify-end"
-                        : "space-x-3"
-                    }`}
-                  >
-                    {msg.user.id !== session?.user?.id && (
-                      <div className="h-8 w-8 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center">
-                        <span className="text-sm font-medium text-primary">
-                          {msg.user.name?.charAt(0) || "A"}
+            {/* Enhanced Chat messages */}
+            <div className="flex-1 relative w-full">
+              {isLoading ? (
+                // Skeleton loading state
+                <div className="absolute inset-0 p-6 space-y-4 overflow-hidden">
+                  {[...Array(6)].map((_, i) => (
+                    <div
+                      key={i}
+                      className="flex items-start gap-2 animate-pulse"
+                    >
+                      <div className="h-8 w-8 rounded-full bg-accent/50" />
+                      <div className="space-y-2">
+                        <div className="h-4 w-48 bg-accent/50 rounded" />
+                        <div className="h-4 w-32 bg-accent/50 rounded" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <Virtuoso
+                  className="absolute inset-0"
+                  style={{ width: "100%" }}
+                  data={Object.entries(groupMessagesByDate(messages))}
+                  totalCount={Object.keys(groupMessagesByDate(messages)).length}
+                  itemContent={(index, [date, dateMessages]) => (
+                    <div key={date} className="space-y-4 py-3 px-6">
+                      <div className="sticky top-0 z-10 flex justify-center">
+                        <span className="px-3 py-1 text-xs bg-accent/80 rounded-full backdrop-blur-sm">
+                          {new Date(date).toLocaleDateString(undefined, {
+                            weekday: "long",
+                            month: "short",
+                            day: "numeric",
+                          })}
                         </span>
                       </div>
-                    )}
-                    <div
-                      className={`rounded-2xl p-4 max-w-[70%] shadow-sm ${
-                        msg.user.id === session?.user?.id
-                          ? "rounded-tr-none bg-primary/90 text-primary-foreground"
-                          : "rounded-tl-none bg-accent/50"
-                      }`}
-                    >
-                      <p>{msg.content}</p>
-                      <span
-                        className={`text-xs mt-2 block ${
-                          msg.user.id === session?.user?.id
-                            ? "text-primary-foreground/80"
-                            : "text-muted-foreground"
-                        }`}
-                      >
-                        {new Date(msg.createdAt).toLocaleTimeString()}
-                      </span>
+                      {dateMessages.map((message, idx) => (
+                        <motion.div
+                          key={message.id}
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -20 }}
+                          transition={{ duration: 0.2 }}
+                          className={`flex ${
+                            message.user.id === session?.user?.id
+                              ? "justify-end"
+                              : "justify-start"
+                          } items-end gap-2`}
+                        >
+                          {message.user.id !== session?.user?.id && (
+                            <div className="flex-shrink-0 h-8 w-8 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center">
+                              <span className="text-sm font-medium text-primary">
+                                {message.user.name?.charAt(0) || "A"}
+                              </span>
+                            </div>
+                          )}
+                          <div
+                            className={`group relative rounded-2xl p-4 max-w-[70%] shadow-sm transition-all ${
+                              message.user.id === session?.user?.id
+                                ? "rounded-tr-none bg-primary/90 text-primary-foreground hover:bg-primary"
+                                : "rounded-tl-none bg-accent/50 hover:bg-accent/60"
+                            }`}
+                          >
+                            <p className="break-words">{message.content}</p>
+                            <div
+                              className={`flex items-center gap-1 mt-1 text-xs ${
+                                message.user.id === session?.user?.id
+                                  ? "text-primary-foreground/80"
+                                  : "text-muted-foreground"
+                              }`}
+                            >
+                              <span>
+                                {new Date(message.createdAt).toLocaleTimeString(
+                                  [],
+                                  {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  }
+                                )}
+                              </span>
+                              {message.user.id === session?.user?.id && (
+                                <span className="opacity-0 group-hover:opacity-100 transition-opacity">
+                                  {message.status === "read" && "✓✓"}
+                                  {message.status === "delivered" && "✓✓"}
+                                  {message.status === "sent" && "✓"}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </motion.div>
+                      ))}
                     </div>
-                  </motion.div>
-                ))}
-              </AnimatePresence>
-              <div ref={messagesEndRef} />
+                  )}
+                  followOutput="smooth"
+                  alignToBottom
+                />
+              )}
             </div>
 
-            {/* Input form */}
-            <form
-              onSubmit={sendMessage}
-              className="p-4 border-t border-border/50 bg-background"
-            >
-              <motion.div
-                initial={{ y: 20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                className="flex items-center space-x-2 px-2"
+            {/* Enhanced Input form */}
+            <div className="flex-shrink-0 w-full">
+              <form
+                onSubmit={sendMessage}
+                className="p-4 border-t border-border/50 bg-background/80 backdrop-blur-sm"
               >
-                <motion.button
-                  type="button"
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="p-2 rounded-full hover:bg-accent/80 transition-colors"
+                <motion.div
+                  initial={{ y: 20, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  className="flex items-center space-x-2 px-2"
                 >
-                  <Paperclip className="h-5 w-5 text-muted-foreground" />
-                </motion.button>
-                <motion.button
-                  type="button"
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="p-2 rounded-full hover:bg-accent/80 transition-colors"
-                >
-                  <ImageIcon className="h-5 w-5 text-muted-foreground" />
-                </motion.button>
-                <div className="relative flex-1">
-                  <input
-                    type="text"
-                    value={message}
-                    onChange={(e) => setMessage(e.target.value)}
-                    placeholder="Type a message..."
-                    className="w-full rounded-full border border-border/50 bg-card px-6 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 pr-12 placeholder:text-muted-foreground/70"
-                  />
+                  <AnimatePresence>
+                    {showImageUploader && (
+                      <motion.div
+                        initial={{ scale: 0.9, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        exit={{ scale: 0.9, opacity: 0 }}
+                        className="absolute bottom-full mb-2 left-0 bg-background border border-border rounded-lg shadow-lg"
+                      >
+                        <ImageUploader
+                          onImageSelect={(file) => {
+                            handleImageSelect(file);
+                            setShowImageUploader(false);
+                          }}
+                        />
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
                   <motion.button
                     type="button"
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-full hover:bg-accent/80 transition-colors"
+                    onClick={() => setShowImageUploader(true)}
+                    className="p-2 rounded-full hover:bg-accent/80 transition-colors relative"
                   >
-                    <Smile className="h-5 w-5 text-muted-foreground" />
+                    <ImageIcon className="h-5 w-5 text-muted-foreground" />
                   </motion.button>
-                </div>
+
+                  <motion.button
+                    type="button"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="p-2 rounded-full hover:bg-accent/80 transition-colors"
+                  >
+                    <Paperclip className="h-5 w-5 text-muted-foreground" />
+                  </motion.button>
+
+                  <div className="relative flex-1">
+                    <input
+                      type="text"
+                      value={message}
+                      onChange={(e) => setMessage(e.target.value)}
+                      placeholder="Type a message..."
+                      className="w-full rounded-full border border-border/50 bg-card px-6 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 pr-12 placeholder:text-muted-foreground/70"
+                    />
+
+                    <AnimatePresence>
+                      {showEmojiPicker && (
+                        <motion.div
+                          initial={{ scale: 0.9, opacity: 0 }}
+                          animate={{ scale: 1, opacity: 1 }}
+                          exit={{ scale: 0.9, opacity: 0 }}
+                          className="absolute bottom-full mb-2 right-0"
+                        >
+                          <EmojiPicker
+                            onEmojiSelect={(emoji: any) => {
+                              setMessage((prev) => prev + emoji.native);
+                              setShowEmojiPicker(false);
+                            }}
+                          />
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+
+                    <motion.button
+                      type="button"
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-full hover:bg-accent/80 transition-colors"
+                    >
+                      <Smile className="h-5 w-5 text-muted-foreground" />
+                    </motion.button>
+                  </div>
+
+                  <motion.button
+                    type="submit"
+                    disabled={!message.trim()}
+                    whileHover={{
+                      scale: message.trim() ? 1.05 : 1,
+                      backgroundColor: message.trim()
+                        ? "var(--primary)"
+                        : undefined,
+                    }}
+                    whileTap={{ scale: message.trim() ? 0.95 : 1 }}
+                    className={`p-3 rounded-full shadow-lg transition-all ${
+                      message.trim()
+                        ? "bg-primary/90 text-primary-foreground hover:shadow-xl"
+                        : "bg-accent/50 text-muted-foreground cursor-not-allowed"
+                    }`}
+                  >
+                    <Send className="h-5 w-5" />
+                  </motion.button>
+                </motion.div>
+              </form>
+            </div>
+
+            {/* Scroll to bottom button */}
+            <AnimatePresence>
+              {showScrollButton && (
                 <motion.button
-                  type="submit"
-                  whileHover={{
-                    scale: 1.05,
-                    backgroundColor: "var(--primary)",
-                  }}
-                  whileTap={{ scale: 0.95 }}
-                  className="p-3 rounded-full bg-primary/90 text-primary-foreground shadow-lg hover:shadow-xl transition-all"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 10 }}
+                  onClick={scrollToBottom}
+                  className="fixed bottom-24 right-8 p-3 rounded-full bg-primary/90 text-primary-foreground shadow-lg hover:shadow-xl transition-all"
                 >
-                  <Send className="h-5 w-5" />
+                  <MessageSquare className="h-5 w-5" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-destructive text-destructive-foreground text-xs flex items-center justify-center">
+                      {unreadCount}
+                    </span>
+                  )}
                 </motion.button>
-              </motion.div>
-            </form>
+              )}
+            </AnimatePresence>
           </>
         ) : (
-          // Fallback when no chat is selected
-          <div className="flex-1 flex items-center justify-center">
+          // Enhanced empty state
+          <div className="flex-1 flex items-center justify-center w-full overflow-hidden">
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="text-center"
+              className="text-center max-w-md mx-auto px-4"
             >
-              <div className="w-16 h-16 rounded-full b mx-auto mb-4 flex items-center justify-center">
-                <MessageSquare className="h-8 w-8 text-primary" />
+              <div className="w-20 h-20 rounded-full bg-primary/10 mx-auto mb-6 flex items-center justify-center">
+                <MessageSquare className="h-10 w-10 text-primary" />
               </div>
-              <h3 className="text-lg font-semibold mb-2">No chat selected</h3>
-              <p className="text-sm text-muted-foreground">
-                Choose a conversation to start messaging
+              <h3 className="text-xl font-semibold mb-3">No chat selected</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Choose a conversation from the sidebar to start messaging. You
+                can create a new chat or continue an existing one.
               </p>
             </motion.div>
           </div>
