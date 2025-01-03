@@ -51,14 +51,14 @@ export function ProfileSidebar({
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-10">
       {/* Bio */}
       <motion.section
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="prose dark:prose-invert max-w-none"
+        className="prose dark:prose-invert max-w-none bg-background/50 backdrop-blur-sm rounded-xl p-6 shadow-sm"
       >
-        <h3 className="text-xl font-semibold mb-3 flex items-center space-x-2">
+        <h3 className="text-xl font-semibold mb-4 flex items-center space-x-2">
           <span>About</span>
         </h3>
         {isEditing ? (
@@ -83,7 +83,7 @@ export function ProfileSidebar({
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
-        className="space-y-3"
+        className="bg-background/50 backdrop-blur-sm rounded-xl p-6 shadow-sm space-y-4"
       >
         <h3 className="text-xl font-semibold">Details</h3>
         {isEditing ? (
@@ -140,7 +140,7 @@ export function ProfileSidebar({
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
-        className="space-y-3"
+        className="bg-background/50 backdrop-blur-sm rounded-xl p-6 shadow-sm space-y-4"
       >
         <h3 className="text-xl font-semibold">Connect</h3>
         {isEditing ? (
@@ -221,8 +221,9 @@ export function ProfileSidebar({
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3 }}
+        className="bg-background/50 backdrop-blur-sm rounded-xl p-6 shadow-sm"
       >
-        <h3 className="text-xl font-semibold mb-3">Skills</h3>
+        <h3 className="text-xl font-semibold mb-4">Skills</h3>
         {isEditing && (
           <div className="flex items-center space-x-2 mb-4">
             <div className="relative flex-1">
@@ -287,8 +288,9 @@ export function ProfileSidebar({
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
+          className="bg-background/50 backdrop-blur-sm rounded-xl p-6 shadow-sm"
         >
-          <h3 className="text-xl font-semibold mb-3">Achievements</h3>
+          <h3 className="text-xl font-semibold mb-4">Achievements</h3>
           {isEditing && (
             <div className="flex items-center space-x-2 mb-4">
               <div className="relative flex-1">

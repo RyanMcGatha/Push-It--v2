@@ -127,9 +127,9 @@ export function Profile({ profile: initialProfile }: ProfileProps) {
           onProfileSettingsChange={setProfileSettings}
         />
 
-        <div className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="mt-24 grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <motion.div variants={itemVariants} className="lg:col-span-1">
+        <div className="container max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="mt-28 grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <motion.div variants={itemVariants} className="lg:col-span-4">
               <div className="sticky top-8">
                 <ProfileSidebar
                   profile={profile}
@@ -139,7 +139,7 @@ export function Profile({ profile: initialProfile }: ProfileProps) {
               </div>
             </motion.div>
 
-            <motion.div variants={itemVariants} className="lg:col-span-2">
+            <motion.div variants={itemVariants} className="lg:col-span-8">
               <CustomSections
                 sections={profile.customSections}
                 isEditing={isEditing}

@@ -110,7 +110,7 @@ export function ProfileHeader({
 
       {/* Banner */}
       <div
-        className="w-full h-64 md:h-80 rounded-xl bg-cover relative overflow-hidden transition-all duration-500 ease-in-out group"
+        className="w-full h-72 md:h-96 rounded-xl bg-cover relative overflow-hidden transition-all duration-500 ease-in-out group"
         style={{
           backgroundColor: profile.themeColor,
           backgroundImage: profile.bannerImage
@@ -244,17 +244,17 @@ export function ProfileHeader({
       </div>
 
       {/* Profile Info Section */}
-      <div className="absolute -bottom-20 left-0 right-0 px-4 md:px-8">
+      <div className="absolute -bottom-24 left-0 right-0 px-4 md:px-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="flex flex-col md:flex-row md:items-end space-y-4 md:space-y-0 md:space-x-6"
+          className="flex flex-col md:flex-row md:items-end space-y-4 md:space-y-0 md:space-x-8"
         >
           {/* Profile Image */}
           <div className="relative group">
             <div
-              className="w-36 h-36 rounded-full border-4 border-background overflow-hidden shadow-xl transition-transform duration-300 ease-in-out group-hover:scale-105"
+              className="w-40 h-40 rounded-full border-4 border-background overflow-hidden shadow-xl transition-transform duration-300 ease-in-out group-hover:scale-105"
               onClick={() => isEditing && avatarInputRef.current?.click()}
             >
               {profile.user.image ? (
@@ -369,7 +369,7 @@ export function ProfileHeader({
           </div>
 
           {/* Name and Title */}
-          <div className="md:mb-6 space-y-3">
+          <div className="md:mb-8 space-y-3">
             {isEditing ? (
               <input
                 type="text"
@@ -379,10 +379,10 @@ export function ProfileHeader({
                     user: { ...profile.user, name: e.target.value },
                   })
                 }
-                className="text-3xl md:text-4xl font-bold bg-background/90 backdrop-blur-sm rounded-lg px-4 py-2 shadow-lg focus:ring-2 focus:ring-primary/50 outline-none w-full md:w-auto"
+                className="text-3xl md:text-5xl font-bold bg-background/90 backdrop-blur-sm rounded-lg px-4 py-2 shadow-lg focus:ring-2 focus:ring-primary/50 outline-none w-full md:w-auto"
               />
             ) : (
-              <h1 className="text-3xl md:text-4xl font-bold text-black drop-shadow-lg">
+              <h1 className="text-3xl md:text-5xl font-bold text-black drop-shadow-lg">
                 {profile.user.name}
               </h1>
             )}
