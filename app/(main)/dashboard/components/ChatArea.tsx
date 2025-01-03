@@ -210,6 +210,7 @@ export default function ChatArea({
   const [unreadCount, setUnreadCount] = useState(0);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showImageUploader, setShowImageUploader] = useState(false);
+  const [showFileUploader, setShowFileUploader] = useState(false);
 
   // Add scroll handler
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
@@ -452,6 +453,41 @@ export default function ChatArea({
     }
   };
 
+  // Add file handling
+  const handleFileSelect = async (file: File) => {
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("type", "attachment");
+
+      const response = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) throw new Error("Failed to upload file");
+
+      const { url } = await response.json();
+      // Send file URL as a message with file type indicator
+      setMessage(`[File] ${url}`);
+      toast.success("File uploaded successfully");
+    } catch (error) {
+      console.error("Error uploading file:", error);
+      toast.error("Failed to upload file");
+    }
+  };
+
+  const handleAddParticipants = async () => {
+    if (!selectedChatId) return;
+    try {
+      // Navigate to add participants page with chat ID
+      router.push(`/dashboard/chats/${selectedChatId}/add-participants`);
+    } catch (error) {
+      console.error("Error navigating to add participants:", error);
+      toast.error("Failed to open add participants page");
+    }
+  };
+
   return (
     <div className="flex flex-col h-full w-full overflow-hidden">
       <motion.div
@@ -637,7 +673,7 @@ export default function ChatArea({
                     <DropdownMenuSeparator />
                     {isGroup ? (
                       <>
-                        <DropdownMenuItem>
+                        <DropdownMenuItem onClick={handleAddParticipants}>
                           <UserPlus className="mr-2" />
                           <span>Add Participants</span>
                         </DropdownMenuItem>
@@ -765,7 +801,7 @@ export default function ChatArea({
             <div className="flex-shrink-0 w-full">
               <form
                 onSubmit={sendMessage}
-                className="p-4 border-t border-border/50 bg-background/80 backdrop-blur-sm"
+                className="p-6 border-t border-border/50 bg-background/80 backdrop-blur-sm"
               >
                 <motion.div
                   initial={{ y: 20, opacity: 0 }}
@@ -804,6 +840,18 @@ export default function ChatArea({
                     type="button"
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
+                    onClick={() => {
+                      const input = document.createElement("input");
+                      input.type = "file";
+                      input.accept = "*/*";
+                      input.onchange = (e) => {
+                        const file = (e.target as HTMLInputElement).files?.[0];
+                        if (file) {
+                          handleFileSelect(file);
+                        }
+                      };
+                      input.click();
+                    }}
                     className="p-2 rounded-full hover:bg-accent/80 transition-colors"
                   >
                     <Paperclip className="h-5 w-5 text-muted-foreground" />

@@ -21,21 +21,50 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
     }
 
-    // Validate file type
-    const validTypes = ["image/jpeg", "image/png", "image/webp"];
-    if (!validTypes.includes(file.type)) {
-      return NextResponse.json(
-        { error: "Invalid file type. Only JPEG, PNG and WebP are allowed" },
-        { status: 400 }
-      );
-    }
+    // Different validation rules based on type
+    if (type === "image" || type === "banner" || type === "avatar") {
+      // Validate image file type
+      const validImageTypes = ["image/jpeg", "image/png", "image/webp"];
+      if (!validImageTypes.includes(file.type)) {
+        return NextResponse.json(
+          { error: "Invalid file type. Only JPEG, PNG and WebP are allowed" },
+          { status: 400 }
+        );
+      }
+      // Max 5MB for images
+      if (file.size > 5 * 1024 * 1024) {
+        return NextResponse.json(
+          { error: "File size too large. Maximum size is 5MB" },
+          { status: 400 }
+        );
+      }
+    } else if (type === "attachment") {
+      // For general attachments, allow more file types but still validate
+      const validAttachmentTypes = [
+        "image/jpeg",
+        "image/png",
+        "image/webp",
+        "application/pdf",
+        "text/plain",
+        "application/msword",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "application/vnd.ms-excel",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      ];
 
-    // Validate file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      return NextResponse.json(
-        { error: "File size too large. Maximum size is 5MB" },
-        { status: 400 }
-      );
+      if (!validAttachmentTypes.includes(file.type)) {
+        return NextResponse.json(
+          { error: "Invalid file type. Please upload a supported file type" },
+          { status: 400 }
+        );
+      }
+      // Max 10MB for attachments
+      if (file.size > 10 * 1024 * 1024) {
+        return NextResponse.json(
+          { error: "File size too large. Maximum size is 10MB" },
+          { status: 400 }
+        );
+      }
     }
 
     const bytes = await file.arrayBuffer();
@@ -46,33 +75,57 @@ export async function POST(request: Request) {
     const filename = `${uuidv4()}.${ext}`;
 
     // Save to appropriate directory based on type
-    const directory = type === "banner" ? "banners" : "avatars";
+    let directory;
+    switch (type) {
+      case "banner":
+        directory = "banners";
+        break;
+      case "avatar":
+        directory = "avatars";
+        break;
+      case "attachment":
+        directory = "attachments";
+        break;
+      default:
+        directory = "uploads";
+    }
+
     const path = join(process.cwd(), "public", "uploads", directory);
     const filepath = join(path, filename);
 
     await writeFile(filepath, buffer);
 
-    const imageUrl = `/uploads/${directory}/${filename}`;
+    const fileUrl = `/uploads/${directory}/${filename}`;
 
     // Update the database based on the type of upload
     if (type === "banner") {
       await prisma.profile.upsert({
         where: { userId: session.user.id },
-        update: { bannerImage: imageUrl },
+        update: { bannerImage: fileUrl },
         create: {
           userId: session.user.id,
-          bannerImage: imageUrl,
+          bannerImage: fileUrl,
         },
       });
-    } else {
-      // Update both user image and profile
+    } else if (type === "avatar") {
       await prisma.user.update({
         where: { id: session.user.id },
-        data: { image: imageUrl },
+        data: { image: fileUrl },
+      });
+    } else if (type === "attachment") {
+      // For attachments, we might want to store metadata in the database
+      await prisma.attachment.create({
+        data: {
+          userId: session.user.id,
+          url: fileUrl,
+          filename: file.name,
+          fileType: file.type,
+          fileSize: file.size,
+        },
       });
     }
 
-    return NextResponse.json({ url: imageUrl });
+    return NextResponse.json({ url: fileUrl });
   } catch (error) {
     console.error("Upload error:", error);
     return NextResponse.json(

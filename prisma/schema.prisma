@@ -24,6 +24,7 @@ model User {
   receivedFriendRequests Friendship[] @relation("ReceivedFriendRequests")
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+  attachments   Attachment[]
 }
 
 model Account {
@@ -145,4 +146,17 @@ model Friendship {
   receiver  User     @relation("ReceivedFriendRequests", fields: [receiverId], references: [id], onDelete: Cascade)
 
   @@unique([senderId, receiverId])
+}
+
+model Attachment {
+  id        String   @id @default(cuid())
+  url       String
+  filename  String
+  fileType  String
+  fileSize  Int
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@index([userId])
 }
