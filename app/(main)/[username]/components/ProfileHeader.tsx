@@ -134,7 +134,7 @@ export function ProfileHeader({
                 className="text-3xl md:text-4xl font-bold bg-background/90 backdrop-blur-sm rounded-lg px-4 py-2 shadow-lg focus:ring-2 focus:ring-primary/50 outline-none w-full md:w-auto"
               />
             ) : (
-              <h1 className="text-3xl md:text-4xl font-bold text-white drop-shadow-lg">
+              <h1 className="text-3xl md:text-4xl font-bold text-black drop-shadow-lg">
                 {profile.user.name}
               </h1>
             )}
@@ -148,7 +148,7 @@ export function ProfileHeader({
               />
             ) : (
               profile.jobTitle && (
-                <p className="text-xl text-white/90 drop-shadow-lg font-medium">
+                <p className="text-xl text-black/90 drop-shadow-lg font-medium">
                   {profile.jobTitle}
                 </p>
               )

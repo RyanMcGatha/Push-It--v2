@@ -1,12 +1,20 @@
 "use client";
 
 import { useSession } from "next-auth/react";
-import { redirect } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
 export default function Home() {
   const { data: session, status } = useSession();
-  console.log(session);
+  const router = useRouter();
+  console.log("session", session);
 
-  return redirect("/login");
+  useEffect(() => {
+    if (status === "loading") return;
+    if (!session) {
+      router.push("/login");
+    } else {
+      router.push("/dashboard");
+    }
+  }, [session, status, router]);
 }

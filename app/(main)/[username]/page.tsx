@@ -41,7 +41,7 @@ export default async function PublicProfilePage({
   }
 
   return (
-    <main className="min-h-screen">
+    <main className="min-h-screen bg-texture">
       <div className="container max-w-6xl pt-4 pb-16">
         <Profile profile={profile} />
       </div>

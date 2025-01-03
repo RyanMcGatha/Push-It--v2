@@ -15,7 +15,7 @@ export default async function MainLayout({
   }
 
   return (
-    <div className="h-screen bg-background bg-texture">
+    <div className="h-screen bg-background ">
       <div className="grid h-full grid-cols-[80px_1fr] gap-0 ">
         <MainNav />
         <main className="h-full ">{children}</main>

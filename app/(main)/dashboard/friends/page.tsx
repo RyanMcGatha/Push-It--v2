@@ -8,9 +8,11 @@ export const metadata: Metadata = {
 
 export default async function FriendsPage() {
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-8">Friends</h1>
-      <FriendsComponent />
+    <div className="min-h-screen bg-background bg-texture">
+      <div className="container mx-auto px-4 py-8">
+        <h1 className="text-3xl font-bold mb-8">Friends</h1>
+        <FriendsComponent />
+      </div>
     </div>
   );
 }

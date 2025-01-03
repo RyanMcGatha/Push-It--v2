@@ -382,12 +382,12 @@ export default function ChatArea({
       <motion.div
         initial={{ y: -20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        className="flex flex-col h-full"
+        className="flex flex-col h-full bg-background bg-texture"
       >
         {selectedChatId ? (
           <>
             {/* Header */}
-            <div className="px-6 py-4 border-b border-border/50 flex items-center justify-between bg-background">
+            <div className="px-6 py-4 border-b border-border/50 flex items-center justify-between ">
               <div className="flex items-center space-x-4">
                 <div className="relative">
                   <div className="h-12 w-12 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 ring-2 ring-background overflow-hidden flex items-center justify-center">
@@ -698,7 +698,7 @@ export default function ChatArea({
               animate={{ opacity: 1, scale: 1 }}
               className="text-center"
             >
-              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 mx-auto mb-4 flex items-center justify-center">
+              <div className="w-16 h-16 rounded-full b mx-auto mb-4 flex items-center justify-center">
                 <MessageSquare className="h-8 w-8 text-primary" />
               </div>
               <h3 className="text-lg font-semibold mb-2">No chat selected</h3>

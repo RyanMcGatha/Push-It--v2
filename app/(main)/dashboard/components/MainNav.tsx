@@ -50,7 +50,6 @@ export default function MainNav() {
       ? [{ id: "profile", href: profileUrl, label: "Profile", icon: User }]
       : []),
     { id: "settings", href: "/settings", label: "Settings", icon: Settings },
-    { id: "help", href: "/help", label: "Help", icon: HelpCircle },
   ];
 
   return (

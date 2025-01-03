@@ -8,15 +8,17 @@ export const metadata: Metadata = {
 
 export default async function NotificationsPage() {
   return (
-    <div className="container max-w-4xl py-6 lg:py-10">
-      <div className="flex flex-col gap-8">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Notifications</h1>
-          <p className="text-muted-foreground">
-            View and manage your notifications
-          </p>
+    <div className="min-h-screen bg-background bg-texture">
+      <div className="container max-w-4xl py-6 lg:py-10">
+        <div className="flex flex-col gap-8">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Notifications</h1>
+            <p className="text-muted-foreground">
+              View and manage your notifications
+            </p>
+          </div>
+          <NotificationsList />
         </div>
-        <NotificationsList />
       </div>
     </div>
   );
